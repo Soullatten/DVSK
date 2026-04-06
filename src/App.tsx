@@ -2,9 +2,12 @@ import PixelBlast from "./components/PixelBlast"
 import MetallicPaint from "./components/MetallicPaint"
 import { useGoogleLogin } from "@react-oauth/google"
 import BorderGlow from "./components/BorderGlow"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import logo from './assets/logo.svg'
+import { auth } from "./firebase"
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth"
+import type { ConfirmationResult } from "firebase/auth"
 
 function CustomGoogleButton() {
   const login = useGoogleLogin({
@@ -28,231 +31,350 @@ function CustomGoogleButton() {
   )
 }
 
-function CustomAppleButton() {
-  const handleAppleLogin = () => {
-    // @ts-ignore
-    AppleID.auth.init({
-      clientId: 'YOUR_APPLE_CLIENT_ID',
-      scope: 'name email',
-      redirectURI: 'http://localhost:5173',
-      usePopup: true,
-    })
-    // @ts-ignore
-    AppleID.auth.signIn()
-  }
-
+function CustomPhoneButton({ onClick }: { onClick: () => void }) {
   return (
     <button
-      onClick={handleAppleLogin}
+      onClick={onClick}
       className="flex items-center justify-center gap-3 px-4 py-3 bg-transparent rounded-lg w-full"
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
         <path
-          d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.4c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.39-1.32 2.76-2.54 3.99zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"
+          d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.61 21 3 13.39 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.58a1 1 0 01-.25 1.01l-2.2 2.2z"
           fill="rgba(255,255,255,0.85)"
         />
       </svg>
-      <span className="text-white text-sm font-medium">Apple</span>
+      <span className="text-white text-sm font-medium">Phone</span>
     </button>
   )
 }
 
-export default function App() {
+function LoginForm({ onRegister, onPhoneClick }: { onRegister: () => void, onPhoneClick: () => void }) {
   const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate()
 
   return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-4xl font-semibold text-white leading-tight tracking-tight" style={{ marginLeft: '100px', fontFamily: 'DM Sans' }}>
+          Welcome Back
+        </h1>
+        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ marginLeft: '139px', fontFamily: 'DM Sans' }}>
+          Please log in to continue.
+        </p>
+      </div>
+
+      <div className="flex gap-3 w-full max-w-sm mb-4" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+        <div className="flex-1">
+          <BorderGlow edgeSensitivity={30} glowColor="45 10 110" backgroundColor="#060010" borderRadius={12} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#6d28d9', '#a21caf', '#8B2BE2', '#9333ea']}>
+            <CustomGoogleButton />
+          </BorderGlow>
+        </div>
+        <div className="flex-1">
+          <BorderGlow edgeSensitivity={30} glowColor="45 10 110" backgroundColor="#060010" borderRadius={12} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#6d28d9', '#a21caf', '#8B2BE2', '#9333ea']}>
+            <CustomPhoneButton onClick={onPhoneClick} />
+          </BorderGlow>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 max-w-sm mb-4" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+        <div className="flex-1 h-px bg-white/10" />
+        <span className="text-white/30 text-xs">OR</span>
+        <div className="flex-1 h-px bg-white/10" />
+      </div>
+
+      <div className="flex flex-col gap-3 max-w-sm" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+        <input type="email" placeholder="Email" className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors" />
+
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors pr-10"
+          />
+          <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-purple-400 transition-colors">
+            {showPassword ? (
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        <button onClick={() => navigate('/home')} className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors">
+          Continue
+        </button>
+
+        <div className="flex items-center justify-center gap-1 mt-1">
+          <span className="text-white/30 text-xs">Forgot your password?</span>
+          <a href="#" className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">Reset Your Password</a>
+        </div>
+
+        <div className="h-px bg-white/10" />
+
+        <div className="flex items-center justify-center gap-1">
+          <span className="text-white/30 text-xs">Don't have an account?</span>
+          <button onClick={onRegister} className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">Register</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function PhoneForm({ onBack }: { onBack: () => void }) {
+  const [phone, setPhone] = useState('')
+  const [otp, setOtp] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const confirmationRef = useRef<ConfirmationResult | null>(null)
+  const navigate = useNavigate()
+
+  const setupRecaptcha = () => {
+    if (!(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+      })
+    }
+  }
+
+  const handleSendOtp = async () => {
+    setError('')
+    if (!phone || phone.length < 10) return setError('Enter a valid 10-digit number')
+    try {
+      setLoading(true)
+      setupRecaptcha()
+      const verifier = (window as any).recaptchaVerifier
+      const confirmation = await signInWithPhoneNumber(auth, `+91${phone}`, verifier)
+      confirmationRef.current = confirmation
+      setOtpSent(true)
+    } catch (err: any) {
+      setError(err.message || 'Failed to send OTP')
+      ;(window as any).recaptchaVerifier = null
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVerifyOtp = async () => {
+    setError('')
+    if (!otp || otp.length !== 6) return setError('Enter the 6-digit OTP')
+    try {
+      setLoading(true)
+      await confirmationRef.current?.confirm(otp)
+      navigate('/home')
+    } catch (err: any) {
+      setError('Invalid OTP. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResend = () => {
+    ;(window as any).recaptchaVerifier = null
+    setOtpSent(false)
+    setOtp('')
+    setError('')
+  }
+
+  return (
+    <>
+      <div id="recaptcha-container" />
+
+      <div className="mb-6">
+        <h1 className="text-4xl font-semibold text-white leading-tight tracking-tight" style={{ marginLeft: '100px', fontFamily: 'DM Sans' }}>
+          Phone Login
+        </h1>
+        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ marginLeft: '108px', fontFamily: 'DM Sans' }}>
+          We'll send you a one-time code.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3 max-w-sm" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+
+        {error && (
+          <p className="text-red-400 text-xs px-1">{error}</p>
+        )}
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value="+91"
+            disabled
+            className="w-16 px-3 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm text-center opacity-60"
+          />
+          <input
+            type="tel"
+            placeholder="Phone number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+            disabled={otpSent}
+            className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
+          />
+        </div>
+
+        {otpSent && (
+          <input
+            type="text"
+            placeholder="Enter 6-digit OTP"
+            value={otp}
+            maxLength={6}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors tracking-widest"
+          />
+        )}
+
+        {!otpSent ? (
+          <button
+            onClick={handleSendOtp}
+            disabled={loading}
+            className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            {loading ? 'Sending...' : 'Send OTP'}
+          </button>
+        ) : (
+          <button
+            onClick={handleVerifyOtp}
+            disabled={loading}
+            className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            {loading ? 'Verifying...' : 'Verify & Continue'}
+          </button>
+        )}
+
+        {otpSent && (
+          <div className="flex items-center justify-center">
+            <button onClick={handleResend} className="text-white/30 text-xs hover:text-purple-400 transition-colors">
+              Resend OTP
+            </button>
+          </div>
+        )}
+
+        <div className="h-px bg-white/10" />
+
+        <div className="flex items-center justify-center">
+          <button onClick={onBack} className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">
+            ← Back to Login
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function RegisterForm({ onLogin }: { onLogin: () => void }) {
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const navigate = useNavigate()
+
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-4xl font-semibold text-white leading-tight tracking-tight" style={{ marginLeft: '100px', fontFamily: 'DM Sans' }}>
+          Create Account
+        </h1>
+        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ marginLeft: '118px', fontFamily: 'DM Sans' }}>
+          Join us — it only takes a minute.
+        </p>
+      </div>
+
+      <div className="flex gap-3 w-full max-w-sm mb-4" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+        <div className="flex-1">
+          <BorderGlow edgeSensitivity={30} glowColor="45 10 110" backgroundColor="#060010" borderRadius={12} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#6d28d9', '#a21caf', '#8B2BE2', '#9333ea']}>
+            <CustomGoogleButton />
+          </BorderGlow>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 max-w-sm mb-4" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+        <div className="flex-1 h-px bg-white/10" />
+        <span className="text-white/30 text-xs">OR</span>
+        <div className="flex-1 h-px bg-white/10" />
+      </div>
+
+      <div className="flex flex-col gap-3 max-w-sm" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+        <div className="flex gap-2">
+          <input type="text" placeholder="First name" className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors" />
+          <input type="text" placeholder="Last name" className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors" />
+        </div>
+
+        <input type="email" placeholder="Email" className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors" />
+
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors pr-10"
+          />
+          <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-purple-400 transition-colors">
+            {showPassword ? (
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+            ) : (
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            )}
+          </button>
+        </div>
+
+        <div className="relative">
+          <input
+            type={showConfirm ? "text" : "password"}
+            placeholder="Confirm password"
+            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors pr-10"
+          />
+          <button onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-purple-400 transition-colors">
+            {showConfirm ? (
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+            ) : (
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            )}
+          </button>
+        </div>
+
+        <button onClick={() => navigate('/home')} className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors">
+          Create Account
+        </button>
+
+        <div className="h-px bg-white/10" />
+
+        <div className="flex items-center justify-center gap-1">
+          <span className="text-white/30 text-xs">Already have an account?</span>
+          <button onClick={onLogin} className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">Log In</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+export default function App() {
+  const [view, setView] = useState<'login' | 'register' | 'phone'>('login')
+
+  return (
     <div className="flex h-screen w-screen overflow-hidden bg-black">
 
-      {/* Mobile background */}
       <div className="absolute inset-0 md:hidden">
-        <PixelBlast
-          variant="circle"
-          pixelSize={4}
-          color="#77148a"
-          patternScale={2}
-          patternDensity={1}
-          pixelSizeJitter={0}
-          enableRipples
-          rippleSpeed={0.4}
-          rippleThickness={0.12}
-          rippleIntensityScale={1.5}
-          liquid={false}
-          liquidStrength={0.12}
-          liquidRadius={1.2}
-          liquidWobbleSpeed={5}
-          speed={0.5}
-          edgeFade={0.25}
-        />
+        <PixelBlast variant="circle" pixelSize={4} color="#77148a" patternScale={2} patternDensity={1} pixelSizeJitter={0} enableRipples rippleSpeed={0.4} rippleThickness={0.12} rippleIntensityScale={1.5} liquid={false} liquidStrength={0.12} liquidRadius={1.2} liquidWobbleSpeed={5} speed={0.5} edgeFade={0.25} />
         <div className="absolute inset-0 bg-black/30" />
       </div>
 
-      {/* Left — animation */}
       <div className="hidden md:flex items-center justify-center w-1/2 h-full p-6">
         <div className="w-full h-full rounded-2xl overflow-hidden">
-          <PixelBlast
-            variant="circle"
-            pixelSize={4}
-            color="#9333ea"
-            patternScale={2}
-            patternDensity={1}
-            pixelSizeJitter={0}
-            enableRipples
-            rippleSpeed={0.4}
-            rippleThickness={0.12}
-            rippleIntensityScale={1.5}
-            liquid={false}
-            liquidStrength={1.12}
-            liquidRadius={100.2}
-            liquidWobbleSpeed={5}
-            speed={0.5}
-            edgeFade={0.25}
-          />
+          <PixelBlast variant="circle" pixelSize={4} color="#9333ea" patternScale={2} patternDensity={1} pixelSizeJitter={0} enableRipples rippleSpeed={0.4} rippleThickness={0.12} rippleIntensityScale={1.5} liquid={false} liquidStrength={1.12} liquidRadius={100.2} liquidWobbleSpeed={5} speed={0.5} edgeFade={0.25} />
         </div>
       </div>
 
       <div className="relative z-10 flex flex-col w-full md:w-1/2 h-full overflow-y-hidden">
-
-        <div style={{
-          width: '700px',
-          height: '330px',
-          marginLeft: '-55px',
-          marginTop: '-60px',
-          overflow: 'hidden',
-          transform: 'rotate(8deg)',
-          transformOrigin: 'left center',
-          flexShrink: 0
-        }}>
-          <MetallicPaint
-            imageSrc={logo}
-            seed={42}
-            scale={2}
-            patternSharpness={0.2}
-            noiseScale={2.5}
-            speed={0.45}
-            liquid={0.25}
-            mouseAnimation={false}
-            brightness={2.45}
-            contrast={0.52}
-            refraction={0.02}
-            blur={0.05}
-            chromaticSpread={1}
-            fresnel={1}
-            angle={1}
-            waveAmplitude={1}
-            distortion={1}
-            contour={0.2}
-            lightColor="#3D0080"
-            darkColor="#000000"
-            tintColor="#8B2BE2"
-          />
+        <div style={{ width: '700px', height: '330px', marginLeft: '-55px', marginTop: '-60px', overflow: 'hidden', transform: 'rotate(8deg)', transformOrigin: 'left center', flexShrink: 0 }}>
+          <MetallicPaint imageSrc={logo} seed={42} scale={2} patternSharpness={0.2} noiseScale={2.5} speed={0.45} liquid={0.25} mouseAnimation={false} brightness={2.45} contrast={0.52} refraction={0.02} blur={0.05} chromaticSpread={1} fresnel={1} angle={1} waveAmplitude={1} distortion={1} contour={0.2} lightColor="#3D0080" darkColor="#000000" tintColor="#8B2BE2" />
         </div>
 
-        <div className="flex flex-col flex-1 px-10 md:px-16" style={{marginTop: '1px'}}>
-
-          <div className="mb-6">
-            <h1 className="text-4xl font-semibold text-white leading-tight tracking-tight" style={{marginLeft: '100px', fontFamily: 'DM Sans'}}>
-              Welcome Back
-            </h1>
-            <p className="text-white/40 text-sm mt-1 tracking-wide" style={{marginLeft: '139px', fontFamily: 'DM Sans'}}>
-              Please log in to continue.
-            </p>
-          </div>
-
-          <div className="flex gap-3 w-full max-w-sm mb-4" style={{marginLeft: '20px', fontFamily: 'DM Sans'}}>
-            <div className="flex-1">
-              <BorderGlow
-                edgeSensitivity={30}
-                glowColor="45 10 110"
-                backgroundColor="#060010"
-                borderRadius={12}
-                glowRadius={40}
-                glowIntensity={1}
-                coneSpread={25}
-                animated={false}
-                colors={['#6d28d9', '#a21caf', '#8B2BE2', '#9333ea']}
-              >
-                <CustomGoogleButton />
-              </BorderGlow>
-            </div>
-            <div className="flex-1">
-              <BorderGlow
-                edgeSensitivity={30}
-                glowColor="45 10 110"
-                backgroundColor="#060010"
-                borderRadius={12}
-                glowRadius={40}
-                glowIntensity={1}
-                coneSpread={25}
-                animated={false}
-                colors={['#6d28d9', '#a21caf', '#8B2BE2', '#9333ea']}
-              >
-                <CustomAppleButton />
-              </BorderGlow>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 max-w-sm mb-4" style={{marginLeft: '20px', fontFamily: 'DM Sans'}}>
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-white/30 text-xs">OR</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
-
-          <div className="flex flex-col gap-3 max-w-sm" style={{marginLeft: '20px', fontFamily: 'DM Sans'}}>
-
-            <input
-              type="email"
-              placeholder="Email"
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors"
-            />
-
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors pr-10"
-              />
-              <button
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-purple-400 transition-colors"
-              >
-                {showPassword ? (
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                  </svg>
-                ) : (
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
-              </button>
-            </div>
-
-            {/* ✅ Navigate to /home on Continue */}
-            <button
-              onClick={() => navigate('/home')}
-              className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors"
-            >
-              Continue
-            </button>
-
-            <div className="flex items-center justify-center gap-1 mt-1">
-              <span className="text-white/30 text-xs">Forgot your password?</span>
-              <a href="#" className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">
-                Reset Your Password
-              </a>
-            </div>
-
-            <div className="h-px bg-white/10" />
-
-            <div className="flex items-center justify-center gap-1">
-              <span className="text-white/30 text-xs">Don't have an account?</span>
-              <a href="#" className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">
-                Register
-              </a>
-            </div>
-          </div>
+        <div className="flex flex-col flex-1 px-10 md:px-16" style={{ marginTop: '1px' }}>
+          {view === 'login' && <LoginForm onRegister={() => setView('register')} onPhoneClick={() => setView('phone')} />}
+          {view === 'register' && <RegisterForm onLogin={() => setView('login')} />}
+          {view === 'phone' && <PhoneForm onBack={() => setView('login')} />}
         </div>
       </div>
     </div>
