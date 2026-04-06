@@ -3,6 +3,7 @@ import MetallicPaint from "./components/MetallicPaint"
 import { useGoogleLogin } from "@react-oauth/google"
 import BorderGlow from "./components/BorderGlow"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import logo from './assets/logo.svg'
 
 function CustomGoogleButton() {
@@ -58,6 +59,7 @@ function CustomAppleButton() {
 
 export default function App() {
   const [showPassword, setShowPassword] = useState(false)
+  const navigate = useNavigate()
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-black">
@@ -109,10 +111,8 @@ export default function App() {
         </div>
       </div>
 
-      
       <div className="relative z-10 flex flex-col w-full md:w-1/2 h-full overflow-y-hidden">
 
-        
         <div style={{
           width: '700px',
           height: '330px',
@@ -148,21 +148,18 @@ export default function App() {
           />
         </div>
 
-        
         <div className="flex flex-col flex-1 px-10 md:px-16" style={{marginTop: '1px'}}>
 
-          
           <div className="mb-6">
-            <h1 className="text-4xl font-semibold text-white leading-tight tracking-tight" style={{marginLeft: '100px', fontFamily: 'DM Sans',}}>
+            <h1 className="text-4xl font-semibold text-white leading-tight tracking-tight" style={{marginLeft: '100px', fontFamily: 'DM Sans'}}>
               Welcome Back
             </h1>
-            <p className="text-white/40 text-sm mt-1 tracking-wide" style={{marginLeft: '139px', fontFamily: 'DM Sans',}}>
+            <p className="text-white/40 text-sm mt-1 tracking-wide" style={{marginLeft: '139px', fontFamily: 'DM Sans'}}>
               Please log in to continue.
             </p>
           </div>
 
-          
-          <div className="flex gap-3 w-full max-w-sm mb-4" style={{marginLeft: '20px', fontFamily: 'DM Sans',}}>
+          <div className="flex gap-3 w-full max-w-sm mb-4" style={{marginLeft: '20px', fontFamily: 'DM Sans'}}>
             <div className="flex-1">
               <BorderGlow
                 edgeSensitivity={30}
@@ -195,15 +192,13 @@ export default function App() {
             </div>
           </div>
 
-          
-          <div className="flex items-center gap-3 max-w-sm mb-4" style={{marginLeft: '20px', fontFamily: 'DM Sans',}}>
+          <div className="flex items-center gap-3 max-w-sm mb-4" style={{marginLeft: '20px', fontFamily: 'DM Sans'}}>
             <div className="flex-1 h-px bg-white/10" />
             <span className="text-white/30 text-xs">OR</span>
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
-          
-          <div className="flex flex-col gap-3 max-w-sm" style={{marginLeft: '20px', fontFamily: 'DM Sans',}}>
+          <div className="flex flex-col gap-3 max-w-sm" style={{marginLeft: '20px', fontFamily: 'DM Sans'}}>
 
             <input
               type="email"
@@ -234,7 +229,11 @@ export default function App() {
               </button>
             </div>
 
-            <button className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors">
+            {/* ✅ Navigate to /home on Continue */}
+            <button
+              onClick={() => navigate('/home')}
+              className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
               Continue
             </button>
 
