@@ -54,17 +54,17 @@ function LoginForm({ onRegister, onPhoneClick }: { onRegister: () => void, onPho
   const navigate = useNavigate()
 
   return (
-    <>
-      <div className="mb-6">
-        <h1 className="text-4xl font-semibold text-white leading-tight tracking-tight" style={{ marginLeft: '100px', fontFamily: 'DM Sans' }}>
+    <div className="w-full max-w-sm mx-auto flex flex-col items-stretch">
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl md:text-4xl font-semibold text-white leading-tight tracking-tight" style={{ fontFamily: 'DM Sans' }}>
           Welcome Back
         </h1>
-        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ marginLeft: '139px', fontFamily: 'DM Sans' }}>
+        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ fontFamily: 'DM Sans' }}>
           Please log in to continue.
         </p>
       </div>
 
-      <div className="flex gap-3 w-full max-w-sm mb-4" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+      <div className="flex gap-3 w-full mb-4" style={{ fontFamily: 'DM Sans' }}>
         <div className="flex-1">
           <BorderGlow edgeSensitivity={30} glowColor="45 10 110" backgroundColor="#060010" borderRadius={12} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#6d28d9', '#a21caf', '#8B2BE2', '#9333ea']}>
             <CustomGoogleButton />
@@ -77,13 +77,13 @@ function LoginForm({ onRegister, onPhoneClick }: { onRegister: () => void, onPho
         </div>
       </div>
 
-      <div className="flex items-center gap-3 max-w-sm mb-4" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+      <div className="flex items-center gap-3 w-full mb-4" style={{ fontFamily: 'DM Sans' }}>
         <div className="flex-1 h-px bg-white/10" />
         <span className="text-white/30 text-xs">OR</span>
         <div className="flex-1 h-px bg-white/10" />
       </div>
 
-      <div className="flex flex-col gap-3 max-w-sm" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+      <div className="flex flex-col gap-3 w-full" style={{ fontFamily: 'DM Sans' }}>
         <input type="email" placeholder="Email" className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors" />
 
         <div className="relative">
@@ -106,7 +106,7 @@ function LoginForm({ onRegister, onPhoneClick }: { onRegister: () => void, onPho
           </button>
         </div>
 
-        <button onClick={() => navigate('/home')} className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors">
+        <button onClick={() => navigate('/home')} className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors mt-2">
           Continue
         </button>
 
@@ -115,14 +115,14 @@ function LoginForm({ onRegister, onPhoneClick }: { onRegister: () => void, onPho
           <a href="#" className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">Reset Your Password</a>
         </div>
 
-        <div className="h-px bg-white/10" />
+        <div className="h-px bg-white/10 my-1" />
 
         <div className="flex items-center justify-center gap-1">
           <span className="text-white/30 text-xs">Don't have an account?</span>
           <button onClick={onRegister} className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">Register</button>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -183,22 +183,22 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <>
+    <div className="w-full max-w-sm mx-auto flex flex-col items-stretch">
       <div id="recaptcha-container" />
 
-      <div className="mb-6">
-        <h1 className="text-4xl font-semibold text-white leading-tight tracking-tight" style={{ marginLeft: '100px', fontFamily: 'DM Sans' }}>
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl md:text-4xl font-semibold text-white leading-tight tracking-tight" style={{ fontFamily: 'DM Sans' }}>
           Phone Login
         </h1>
-        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ marginLeft: '108px', fontFamily: 'DM Sans' }}>
+        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ fontFamily: 'DM Sans' }}>
           We'll send you a one-time code.
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 max-w-sm" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+      <div className="flex flex-col gap-3 w-full" style={{ fontFamily: 'DM Sans' }}>
 
         {error && (
-          <p className="text-red-400 text-xs px-1">{error}</p>
+          <p className="text-red-400 text-xs px-1 text-center">{error}</p>
         )}
 
         <div className="flex gap-2">
@@ -225,7 +225,7 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
             value={otp}
             maxLength={6}
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors tracking-widest"
+            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors tracking-widest text-center"
           />
         )}
 
@@ -233,7 +233,7 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
           <button
             onClick={handleSendOtp}
             disabled={loading}
-            className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+            className="w-full py-3 mt-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
           >
             {loading ? 'Sending...' : 'Send OTP'}
           </button>
@@ -241,21 +241,21 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
           <button
             onClick={handleVerifyOtp}
             disabled={loading}
-            className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+            className="w-full py-3 mt-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
           >
             {loading ? 'Verifying...' : 'Verify & Continue'}
           </button>
         )}
 
         {otpSent && (
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center mt-2">
             <button onClick={handleResend} className="text-white/30 text-xs hover:text-purple-400 transition-colors">
               Resend OTP
             </button>
           </div>
         )}
 
-        <div className="h-px bg-white/10" />
+        <div className="h-px bg-white/10 my-2" />
 
         <div className="flex items-center justify-center">
           <button onClick={onBack} className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">
@@ -263,7 +263,7 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
           </button>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -273,17 +273,17 @@ function RegisterForm({ onLogin }: { onLogin: () => void }) {
   const navigate = useNavigate()
 
   return (
-    <>
-      <div className="mb-6">
-        <h1 className="text-4xl font-semibold text-white leading-tight tracking-tight" style={{ marginLeft: '100px', fontFamily: 'DM Sans' }}>
+    <div className="w-full max-w-sm mx-auto flex flex-col items-stretch">
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl md:text-4xl font-semibold text-white leading-tight tracking-tight" style={{ fontFamily: 'DM Sans' }}>
           Create Account
         </h1>
-        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ marginLeft: '118px', fontFamily: 'DM Sans' }}>
+        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ fontFamily: 'DM Sans' }}>
           Join us — it only takes a minute.
         </p>
       </div>
 
-      <div className="flex gap-3 w-full max-w-sm mb-4" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+      <div className="flex gap-3 w-full mb-4" style={{ fontFamily: 'DM Sans' }}>
         <div className="flex-1">
           <BorderGlow edgeSensitivity={30} glowColor="45 10 110" backgroundColor="#060010" borderRadius={12} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#6d28d9', '#a21caf', '#8B2BE2', '#9333ea']}>
             <CustomGoogleButton />
@@ -291,13 +291,13 @@ function RegisterForm({ onLogin }: { onLogin: () => void }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 max-w-sm mb-4" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+      <div className="flex items-center gap-3 w-full mb-4" style={{ fontFamily: 'DM Sans' }}>
         <div className="flex-1 h-px bg-white/10" />
         <span className="text-white/30 text-xs">OR</span>
         <div className="flex-1 h-px bg-white/10" />
       </div>
 
-      <div className="flex flex-col gap-3 max-w-sm" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
+      <div className="flex flex-col gap-3 w-full" style={{ fontFamily: 'DM Sans' }}>
         <div className="flex gap-2">
           <input type="text" placeholder="First name" className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors" />
           <input type="text" placeholder="Last name" className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors" />
@@ -335,18 +335,18 @@ function RegisterForm({ onLogin }: { onLogin: () => void }) {
           </button>
         </div>
 
-        <button onClick={() => navigate('/home')} className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors">
+        <button onClick={() => navigate('/home')} className="w-full py-3 mt-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors">
           Create Account
         </button>
 
-        <div className="h-px bg-white/10" />
+        <div className="h-px bg-white/10 my-2" />
 
         <div className="flex items-center justify-center gap-1">
           <span className="text-white/30 text-xs">Already have an account?</span>
           <button onClick={onLogin} className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">Log In</button>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -367,12 +367,12 @@ export default function App() {
         </div>
       </div>
 
-      <div className="relative z-10 flex flex-col w-full md:w-1/2 h-full overflow-y-hidden">
-        <div style={{ width: '700px', height: '330px', marginLeft: '-55px', marginTop: '-60px', overflow: 'hidden', transform: 'rotate(8deg)', transformOrigin: 'left center', flexShrink: 0 }}>
+      <div className="relative z-10 flex flex-col w-full md:w-1/2 h-full items-center justify-center px-4 sm:px-10 md:px-16 overflow-y-auto pb-10">
+        <div className="w-full max-w-[700px] aspect-[2/1] -mt-10 sm:-mt-20 md:-mt-20 lg:-mt-24 pointer-events-none" style={{ transform: 'rotate(8deg)', transformOrigin: 'center center', flexShrink: 0 }}>
           <MetallicPaint imageSrc={logo} seed={42} scale={2} patternSharpness={0.2} noiseScale={2.5} speed={0.45} liquid={0.25} mouseAnimation={false} brightness={2.45} contrast={0.52} refraction={0.02} blur={0.05} chromaticSpread={1} fresnel={1} angle={1} waveAmplitude={1} distortion={1} contour={0.2} lightColor="#3D0080" darkColor="#000000" tintColor="#8B2BE2" />
         </div>
 
-        <div className="flex flex-col flex-1 px-10 md:px-16" style={{ marginTop: '1px' }}>
+        <div className="flex flex-col w-full max-w-sm mt-[-40px] sm:mt-[-80px] relative z-20">
           {view === 'login' && <LoginForm onRegister={() => setView('register')} onPhoneClick={() => setView('phone')} />}
           {view === 'register' && <RegisterForm onLogin={() => setView('login')} />}
           {view === 'phone' && <PhoneForm onBack={() => setView('login')} />}

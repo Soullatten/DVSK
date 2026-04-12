@@ -14,6 +14,26 @@ const CART = [
   { id: 2, name: 'Silk Noir Draped Dress', variant: 'Onyx / Small', price: 1200, qty: 1, image: mockImage2 }
 ];
 
+const StepLabel = ({ num, title, isActive, isDone }: any) => (
+  <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px", opacity: isActive || isDone ? 1 : 0.3, transition: "opacity 0.3s" }}>
+    <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: isActive ? "#fff" : "transparent", border: "1px solid #fff", color: isActive ? "#000" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700 }}>
+      {isDone ? "✓" : num}
+    </div>
+    <h3 style={{ fontFamily: "'Jost', sans-serif", fontSize: "20px", fontWeight: 300, margin: 0 }}>{title}</h3>
+  </div>
+);
+
+const CustomInput = ({ placeholder, type = "text", width = "100%", value, onChange }: any) => (
+  <input 
+    type={type} 
+    placeholder={placeholder} 
+    value={value}
+    onChange={onChange}
+    className="checkout-input"
+    style={{ width, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.1)", padding: "16px 20px", color: "#fff", fontFamily: "'Jost', sans-serif", fontSize: "14px", outline: "none", transition: "border-color 0.3s" }}
+  />
+);
+
 export default function Checkout() {
   const navigate = useNavigate();
   const subtotal = CART.reduce((acc, item) => acc + (item.price * item.qty), 0);
@@ -29,27 +49,6 @@ export default function Checkout() {
     if (/^6(011|5)/.test(cleanNum)) return "DISCOVER";
     return "UNKNOWN";
   };
-
-  // Quick inputs
-  const StepLabel = ({ num, title, isActive, isDone }: any) => (
-    <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px", opacity: isActive || isDone ? 1 : 0.3, transition: "opacity 0.3s" }}>
-      <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: isActive ? "#fff" : "transparent", border: "1px solid #fff", color: isActive ? "#000" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700 }}>
-        {isDone ? "✓" : num}
-      </div>
-      <h3 style={{ fontFamily: "'Jost', sans-serif", fontSize: "20px", fontWeight: 300, margin: 0 }}>{title}</h3>
-    </div>
-  );
-
-  const CustomInput = ({ placeholder, type = "text", width = "100%", value, onChange }: any) => (
-    <input 
-      type={type} 
-      placeholder={placeholder} 
-      value={value}
-      onChange={onChange}
-      className="checkout-input"
-      style={{ width, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.1)", padding: "16px 20px", color: "#fff", fontFamily: "'Jost', sans-serif", fontSize: "14px", outline: "none", transition: "border-color 0.3s" }}
-    />
-  );
 
   return (
     <div style={{ backgroundColor: "#040404", color: "#fff", minHeight: "100vh", fontFamily: "'Jost', sans-serif", display: "flex", flexDirection: "column" }}>

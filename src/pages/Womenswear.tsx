@@ -9,9 +9,9 @@ import Footer from "../components/Footer";
 
 import productImage from '../assets/image6.png';
 import Image2 from '../assets/image7.avif';
-import Image3 from '../assets/Gemini_Generated_Image_a8lix1a8lix1a8li.png';
+import Image3 from '../assets/image01.png';
 import Image4 from '../assets/image3.png';
-import Image5 from '../assets/Gemini_Generated_Image_gczwalgczwalgczw.png';
+import Image5 from '../assets/image03.png';
 
 const PRODUCTS = [
   { id: 1, name: "Silk Chiffon Slip", price: 1850, category: "DRESSES", image: Image3, tag: "NEW SEASON" },

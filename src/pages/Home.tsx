@@ -18,9 +18,9 @@ import Navbar from "../components/Navbar";
 // ──── Images ──────────────────────────────────────────────────────────────
 import productImage from '../assets/image6.png';
 import Image2 from '../assets/image7.avif'
-import Image3 from '../assets/Gemini_Generated_Image_a8lix1a8lix1a8li.png';
+import Image3 from '../assets/image01.png';
 import Image4 from '../assets/image3.png';
-import Image5 from '../assets/Gemini_Generated_Image_gczwalgczwalgczw.png';
+import Image5 from '../assets/image03.png';
 
 // ──── Curved Loop ──────────────────────────────────────────────────────────────
 import CurvedLoop from '../components/CurvedLoop';
@@ -248,12 +248,21 @@ const COLLECTION_DATA = [
 
 const ScrollTextItem: React.FC<{ text: string; index: number; onEnter: (i: number) => void }> = ({ text, index, onEnter }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 900);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: ref,
-    offset: ["start 85%", "start 35%"]
+    offset: isMobile ? ["start 95%", "start 65%"] : ["start 85%", "start 35%"]
   });
 
-  const opacity = useTransform(scrollYProgress, [0, 1], [0.15, 1]);
+  const opacity = useTransform(scrollYProgress, [0, 1], isMobile ? [0, 1] : [0.15, 1]);
   const y = useTransform(scrollYProgress, [0, 1], [50, 0]);
   const filter = useTransform(scrollYProgress, [0, 1], ["blur(12px)", "blur(0px)"]);
 
@@ -262,7 +271,7 @@ const ScrollTextItem: React.FC<{ text: string; index: number; onEnter: (i: numbe
       ref={ref}
       style={{ ...styles.scrollText, opacity, y, filter, position: "relative", zIndex: 2 } as Record<string, any>}
       onViewportEnter={() => onEnter(index)}
-      viewport={{ amount: 0.5, once: false }}
+      viewport={{ amount: isMobile ? 0 : 0.5, margin: isMobile ? "0px 0px -40% 0px" : "0px" }}
     >
       {text}
     </motion.div>
@@ -448,16 +457,16 @@ const Home: React.FC = () => {
       </div>
 
       {/* ── Section 2 ── */}
-      <section style={{ ...styles.section2, position: "relative" }} ref={section2Ref}>
+      <section style={{ ...styles.section2, position: "relative" }} ref={section2Ref} className="section2-container">
 
         {/* LEFT IMAGE & INDICATOR */}
-        <div style={styles.leftWrapperOuter}>
+        <div style={styles.leftWrapperOuter} className="section2-left-outer">
 
           {/* Ambient Glow Matching Hero Theme */}
           <div style={{ ...styles.blobLeft, top: "40%", left: "-5%", zIndex: 0, opacity: 0.8 }} />
 
           {/* SCROLL INDICATOR */}
-          <div style={styles.scrollIndicatorWrapper}>
+          <div style={styles.scrollIndicatorWrapper} className="section2-scroll-indicator">
             <div style={styles.scrollIndicatorLine}>
               <motion.div style={{ ...styles.scrollIndicatorFill, height: indicatorHeight } as Record<string, any>} />
             </div>
@@ -466,7 +475,7 @@ const Home: React.FC = () => {
             </div>
           </div>
 
-          <div style={styles.leftImageWrapper}>
+          <div style={styles.leftImageWrapper} className="section2-left-image-wrapper">
             <motion.div style={{ width: "100%", height: "100%", scale: imageScale } as Record<string, any>}>
               <AnimatePresence>
                 <motion.div
@@ -489,13 +498,13 @@ const Home: React.FC = () => {
         </div>
 
         {/* RIGHT CONTENT */}
-        <div style={styles.rightContent}>
+        <div style={styles.rightContent} className="section2-right-content">
           {/* 
             ── RIGHT SIDE BACKGROUND ELEMENTS ──
             Positioned absolutely within rightContent to act as a background.
             Parallax effects bound to sectionY.
           */}
-          <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
+          <div className="section2-right-bg-elements" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
 
             {/* Ambient Glow */}
             <div style={{ ...styles.blobRight, position: "absolute", top: "50%", right: "-10%", width: "500px", height: "500px", opacity: 0.4 }} />
@@ -711,6 +720,44 @@ const Home: React.FC = () => {
           .category-box {
             height: 40vh !important;
             min-height: 250px !important;
+          }
+        }
+
+        @media (max-width: 900px) {
+          .section2-container {
+            display: block !important;
+            padding-top: 0 !important;
+          }
+          .section2-left-outer {
+            width: 100% !important;
+            padding: 0 !important;
+            height: 100vh !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 10 !important; /* Forces image over text */
+          }
+          .section2-scroll-indicator {
+            display: none !important;
+          }
+          .section2-left-image-wrapper {
+            width: 100% !important;
+            height: 60vh !important;
+            top: 0 !important;
+            border-radius: 0 !important;
+            position: relative !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            background-color: #080808 !important;
+          }
+          .section2-right-content {
+            width: 100% !important;
+            padding: 100vh 20px 50vh !important; /* Start reading immediately below screen fold */
+            margin-top: -100vh !important; /* Overlap exactly under the left track */
+            z-index: 5 !important; /* Renders perfectly underneath image */
+            gap: 80vh !important;
+            position: relative;
+          }
+          .section2-right-bg-elements {
+            display: none !important; 
           }
         }
 

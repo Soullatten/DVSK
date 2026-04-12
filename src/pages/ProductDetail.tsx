@@ -11,8 +11,8 @@ import Footer from "../components/Footer";
 import imageMain from '../assets/image6.png';
 import imageAlt1 from '../assets/image7.avif';
 import imageAlt2 from '../assets/image3.png';
-import imageAlt3 from '../assets/Gemini_Generated_Image_a8lix1a8lix1a8li.png';
-import imageAlt4 from '../assets/Gemini_Generated_Image_gczwalgczwalgczw.png';
+import imageAlt3 from '../assets/image01.png';
+import imageAlt4 from '../assets/image03.png';
 
 const GALLERY = [imageMain, imageAlt1, imageAlt2, imageAlt3, imageAlt4];
 const SIZES = ["S", "M", "L", "XL"];
