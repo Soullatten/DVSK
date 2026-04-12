@@ -17,6 +17,7 @@ const MENU_ITEMS = [
   { label: 'Home', ariaLabel: 'Go to Home', link: '/' },
   { label: 'Women', ariaLabel: 'Go to Women', link: '/women' },
   { label: 'Men', ariaLabel: 'Go to Men', link: '/men' },
+  { label: 'Accessories', ariaLabel: 'Go to Accessories', link: '/accessories' },
   { label: 'About', ariaLabel: 'Go to About', link: '/about' },
 ];
 

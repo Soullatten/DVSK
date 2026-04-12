@@ -7,6 +7,7 @@ import { SlidersHorizontal } from 'lucide-react';
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
+// Reusing the same images as existing pages conforming to user instructions to preserve structural aesthetic
 import productImage from '../assets/image6.png';
 import Image2 from '../assets/image7.avif';
 import Image3 from '../assets/image01.png';
@@ -14,17 +15,17 @@ import Image4 from '../assets/image3.png';
 import Image5 from '../assets/image03.png';
 
 const PRODUCTS = [
-  { id: 1, name: "OBSIDIAN TRENCH", price: 1850, category: "OUTERWEAR", image: Image3, tag: "NEW SEASON" },
-  { id: 2, name: "CASHMERE OVERCOAT", price: 2200, category: "OUTERWEAR", image: Image2, tag: "CORE" },
-  { id: 3, name: "SILK NOIL SHIRT", price: 650, category: "SHIRTS", image: Image4, tag: "ESSENTIALS" },
-  { id: 4, name: "PLEATED TROUSERS", price: 850, category: "BOTTOMS", image: productImage, tag: "FW/26" },
-  { id: 5, name: "TEXTURED BLAZER", price: 1400, category: "SUITING", image: Image5, tag: "FW/26" },
-  { id: 6, name: "MERINO TURTLENECK", price: 550, category: "KNITWEAR", image: Image2, tag: "CORE" },
-  { id: 7, name: "COTTON POPLIN SHIRT", price: 450, category: "SHIRTS", image: Image4, tag: "ESSENTIALS" },
-  { id: 8, name: "WOOL CARGO PANTS", price: 750, category: "BOTTOMS", image: productImage, tag: "NEW SEASON" },
+  { id: 101, name: "OBSIDIAN SUNGLASSES", price: 350, category: "EYEWEAR", image: Image5, tag: "NEW SEASON" },
+  { id: 102, name: "LEATHER TOTE", price: 1200, category: "BAGS", image: Image2, tag: "CORE" },
+  { id: 103, name: "SILVER CHAIN NECKLACE", price: 450, category: "JEWELRY", image: Image4, tag: "ESSENTIALS" },
+  { id: 104, name: "CASHMERE SCARF", price: 280, category: "SCARVES", image: productImage, tag: "FW/26" },
+  { id: 105, name: "CHUNKY RING SET", price: 210, category: "JEWELRY", image: Image3, tag: "FW/26" },
+  { id: 106, name: "MINIMALIST WATCH", price: 950, category: "WATCHES", image: Image2, tag: "CORE" },
+  { id: 107, name: "LEATHER GLOVES", price: 320, category: "GLOVES", image: Image4, tag: "ESSENTIALS" },
+  { id: 108, name: "WEEKENDER DUFFLE", price: 1450, category: "BAGS", image: Image5, tag: "NEW SEASON" },
 ];
 
-const CATEGORIES = ["ALL", "OUTERWEAR", "SUITING", "SHIRTS", "KNITWEAR", "BOTTOMS"];
+const CATEGORIES = ["ALL", "BAGS", "EYEWEAR", "JEWELRY", "WATCHES", "SCARVES", "GLOVES"];
 
 const SORT_OPTIONS = [
   { label: "Featured", value: "featured" },
@@ -32,7 +33,7 @@ const SORT_OPTIONS = [
   { label: "Price: High to Low", value: "price-high" },
 ];
 
-export default function Menswear() {
+export default function Accessories() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start start", "end start"] });
@@ -67,14 +68,14 @@ export default function Menswear() {
   });
 
   return (
-    <div style={{ backgroundColor: "#080808", color: "#fff", minHeight: "100vh", fontFamily: "'Jost', sans-serif" }} ref={containerRef}>
+    <div style={{ backgroundColor: "#080808", color: "#fff", minHeight: "100vh", fontFamily: "'Jost', sans-serif", overflowX: "hidden" }} ref={containerRef}>
       <Navbar />
 
       <main style={{ paddingTop: "72px" }}>
         {/* Hero Section */}
         <div style={{ position: "relative", width: "100%", height: "70vh", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <motion.div style={{ position: "absolute", inset: 0, y: yParallax, opacity: opacityParallax }}>
-            <img src={Image3} alt="Menswear Hero" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.55) contrast(1.1)" }} />
+            <img src={productImage} alt="Accessories Hero" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.55) contrast(1.1)" }} />
           </motion.div>
 
           {/* Vignette Overlay for Depth */}
@@ -85,11 +86,11 @@ export default function Menswear() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
-            style={{ position: "relative", zIndex: 10, textAlign: "center" }}
+            style={{ position: "relative", zIndex: 10, textAlign: "center", width: "100%", padding: "0 20px" }}
           >
             <p style={{ fontSize: "11px", letterSpacing: "0.5em", color: "rgba(255,255,255,0.7)", marginBottom: "24px" }}>DVSK CLO.</p>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(4.5rem, 12vw, 11rem)", lineHeight: 0.85, fontWeight: 300, margin: 0, textTransform: "uppercase", textShadow: "0 20px 40px rgba(0,0,0,0.5)" }}>
-              Menswear
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(3.5rem, 10vw, 9rem)", lineHeight: 0.85, fontWeight: 300, margin: 0, textTransform: "uppercase", textShadow: "0 20px 40px rgba(0,0,0,0.5)" }}>
+              Accessories
             </h1>
           </motion.div>
         </div>
@@ -132,7 +133,7 @@ export default function Menswear() {
 
               {/* Price Range */}
               <div style={{ marginBottom: "40px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "16px" }}>
+                <div style={{ display: "flex", justifyItems: "center", justifyContent: "space-between", alignItems: "baseline", marginBottom: "16px" }}>
                   <h4 style={{ fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.3)", margin: 0, textTransform: "uppercase" }}>Price</h4>
                   <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", letterSpacing: "0.1em" }}>Up to ${maxPrice}</span>
                 </div>
@@ -184,7 +185,7 @@ export default function Menswear() {
           </div>
 
           {/* Right Main Content */}
-          <div style={{ flex: 1, minWidth: "320px" }}>
+          <div style={{ flex: 1, minWidth: "320px", overflow: "hidden" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px", borderBottom: "0.5px solid rgba(255,255,255,0.08)", paddingBottom: "20px" }}>
               <span style={{ fontSize: "11px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.4)" }}>SHOWING {filteredProducts.length} {filteredProducts.length === 1 ? 'RESULT' : 'RESULTS'}</span>
             </div>
@@ -200,7 +201,7 @@ export default function Menswear() {
                     animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
                     exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
                     transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                    style={{ cursor: "pointer", textAlign: "left" }}
+                    style={{ cursor: "pointer", textAlign: "left", width: "100%" }}
                     className="product-wrapper"
                   >
                     <div style={{ width: "100%", aspectRatio: "3/4", overflow: "hidden", position: "relative", marginBottom: "16px", background: "rgba(255,255,255,0.02)" }}>

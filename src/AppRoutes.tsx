@@ -7,6 +7,7 @@ import About from './pages/About.tsx'
 import Account from './pages/Account.tsx'
 import Menswear from './pages/Menswear.tsx'
 import Womenswear from './pages/Womenswear.tsx'
+import Accessories from './pages/Accessories.tsx'
 import ProductDetail from './pages/ProductDetail.tsx'
 import Checkout from './pages/Checkout.tsx'
 import PageWrapper from './components/PageWrapper.tsx'
@@ -24,6 +25,7 @@ export default function AppRoutes() {
         <Route path="/account" element={<PageWrapper><Account /></PageWrapper>} />
         <Route path="/men" element={<PageWrapper><Menswear /></PageWrapper>} />
         <Route path="/women" element={<PageWrapper><Womenswear /></PageWrapper>} />
+        <Route path="/accessories" element={<PageWrapper><Accessories /></PageWrapper>} />
         <Route path="/product/:id" element={<PageWrapper><ProductDetail /></PageWrapper>} />
         <Route path="/checkout" element={<PageWrapper><Checkout /></PageWrapper>} />
       </Routes>
