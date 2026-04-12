@@ -5,6 +5,7 @@ import BorderGlow from "./components/BorderGlow"
 import { useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import logo from './assets/logo.svg'
+import PixelDragon from './components/PixelDragon'
 import { auth } from "./firebase"
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth"
 import type { ConfirmationResult } from "firebase/auth"
@@ -353,8 +354,8 @@ export default function App() {
   const [view, setView] = useState<'login' | 'register' | 'phone'>('login')
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-black">
-
+    <div className="flex h-screen w-screen overflow-hidden bg-black relative">
+      <PixelDragon />
       <div className="absolute inset-0 md:hidden">
         <PixelBlast variant="circle" pixelSize={4} color="#77148a" patternScale={2} patternDensity={1} pixelSizeJitter={0} enableRipples rippleSpeed={0.4} rippleThickness={0.12} rippleIntensityScale={1.5} liquid={false} liquidStrength={0.12} liquidRadius={1.2} liquidWobbleSpeed={5} speed={0.5} edgeFade={0.25} />
         <div className="absolute inset-0 bg-black/30" />
