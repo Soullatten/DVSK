@@ -3,28 +3,14 @@ import { useNavigate } from "react-router-dom";
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Loader2 } from 'lucide-react';
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { productsApi } from "../api/products";
+import type { Product } from "../api/types";
 
-import productImage from '../assets/image6.png';
-import Image2 from '../assets/image7.avif';
-import Image3 from '../assets/image01.png';
-import Image4 from '../assets/image3.png';
-import Image5 from '../assets/image03.png';
-
-const PRODUCTS = [
-  { id: 1, name: "Silk Chiffon Slip", price: 1850, category: "DRESSES", image: Image3, tag: "NEW SEASON" },
-  { id: 2, name: "Cashmere Cardigan", price: 1200, category: "KNITWEAR", image: Image2, tag: "CORE" },
-  { id: 3, name: "Chantilly Lace Camisole", price: 650, category: "TOPS", image: Image4, tag: "ESSENTIALS" },
-  { id: 4, name: "Pleated Velvet Maxi", price: 850, category: "BOTTOMS", image: productImage, tag: "SS/26" },
-  { id: 5, name: "Tailored Hourglass Blazer", price: 1400, category: "SUITING", image: Image5, tag: "SS/26" },
-  { id: 6, name: "Merino Wrap Coat", price: 2550, category: "OUTERWEAR", image: Image2, tag: "CORE" },
-  { id: 7, name: "Liquid Satin Blouse", price: 450, category: "TOPS", image: Image4, tag: "ESSENTIALS" },
-  { id: 8, name: "Sculpted Leather Corset", price: 750, category: "TOPS", image: productImage, tag: "NEW SEASON" },
-];
-
-const CATEGORIES = ["ALL", "DRESSES", "OUTERWEAR", "TOPS", "KNITWEAR", "BOTTOMS", "SUITING"];
+import fallbackImage from '../assets/image3.png';
+import heroImage from '../assets/image3.png';
 
 const SORT_OPTIONS = [
   { label: "Featured", value: "featured" },
@@ -39,13 +25,16 @@ export default function Womenswear() {
   const yParallax = useTransform(scrollYProgress, [0, 1], [0, 300]);
   const opacityParallax = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("ALL");
-  const [maxPrice, setMaxPrice] = useState(2500);
+  const [maxPrice, setMaxPrice] = useState(10000);
   const [sortBy, setSortBy] = useState("featured");
 
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.4, // slightly slower for a more graceful feel
+      duration: 1.4,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), 
     });
     function raf(time: number) {
@@ -56,13 +45,35 @@ export default function Womenswear() {
     return () => lenis.destroy();
   }, []);
 
-  const filteredProducts = PRODUCTS.filter(p => {
-    if (activeCategory !== "ALL" && p.category !== activeCategory) return false;
-    if (p.price > maxPrice) return false;
+  // Fetch live products from backend
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        setLoading(true);
+        const res = await productsApi.getProducts({ gender: 'WOMEN', limit: 50 });
+        setProducts(res.data);
+      } catch (err: any) {
+        console.error('Failed to fetch products:', err);
+        setError('Failed to load products. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProducts();
+  }, []);
+
+  // Extract unique categories from live data
+  const CATEGORIES = ["ALL", ...Array.from(new Set(products.map(p => p.category.name.toUpperCase())))];
+
+  const filteredProducts = products.filter(p => {
+    if (activeCategory !== "ALL" && p.category.name.toUpperCase() !== activeCategory) return false;
+    if (Number(p.salePrice || p.basePrice) > maxPrice) return false;
     return true;
   }).sort((a, b) => {
-    if (sortBy === "price-low") return a.price - b.price;
-    if (sortBy === "price-high") return b.price - a.price;
+    const priceA = Number(a.salePrice || a.basePrice);
+    const priceB = Number(b.salePrice || b.basePrice);
+    if (sortBy === "price-low") return priceA - priceB;
+    if (sortBy === "price-high") return priceB - priceA;
     return 0; // featured
   });
 
@@ -87,7 +98,7 @@ export default function Womenswear() {
         <div style={{ position: "relative", width: "100%", height: "70vh", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <motion.div style={{ position: "absolute", inset: 0, y: yParallax, opacity: opacityParallax }}>
             {/* Adding a subtle sepia & hue shift to instantly warm the hero image aesthetic */}
-            <img src={Image4} alt="Womenswear Hero" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.75) contrast(1.05) sepia(0.15) hue-rotate(-10deg)" }} />
+            <img src={heroImage} alt="Womenswear Hero" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.75) contrast(1.05) sepia(0.15) hue-rotate(-10deg)" }} />
           </motion.div>
 
           {/* Vignette Overlay fading to deep Mulberry/Plum black */}
@@ -102,7 +113,7 @@ export default function Womenswear() {
           >
             <p style={{ fontSize: "11px", letterSpacing: "0.5em", color: "#e67a9a", marginBottom: "16px", textTransform: "uppercase" }}>DVSK CLO.</p>
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(5.5rem, 15vw, 13rem)", lineHeight: 0.85, fontWeight: 300, fontStyle: "italic", margin: 0, textShadow: "0 20px 40px rgba(230, 122, 154, 0.3)", color: "#fff9fa" }}>
-              Womenswear
+              Women
             </h1>
           </motion.div>
         </div>
@@ -144,13 +155,13 @@ export default function Womenswear() {
               <div style={{ marginBottom: "40px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "16px" }}>
                   <h4 style={{ fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,249,250,0.5)", margin: 0, textTransform: "uppercase" }}>Price Focus</h4>
-                  <span style={{ fontSize: "11px", color: "#e67a9a", letterSpacing: "0.1em" }}>Up to ${maxPrice}</span>
+                  <span style={{ fontSize: "11px", color: "#e67a9a", letterSpacing: "0.1em" }}>Up to ₹{maxPrice.toLocaleString()}</span>
                 </div>
                 <input 
                   type="range" 
                   min="0" 
-                  max="2500" 
-                  step="50"
+                  max="10000" 
+                  step="100"
                   value={maxPrice} 
                   onChange={(e) => setMaxPrice(Number(e.target.value))}
                   className="girly-slider"
@@ -200,12 +211,25 @@ export default function Womenswear() {
             </div>
 
             <motion.div layout style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "60px 40px" }}>
+              {loading ? (
+                <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "120px 0", gap: "20px" }}>
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
+                    <Loader2 size={28} color="#e67a9a" />
+                  </motion.div>
+                  <span style={{ fontSize: "11px", letterSpacing: "0.2em", color: "rgba(255,249,250,0.3)", textTransform: "uppercase" }}>Loading collection...</span>
+                </div>
+              ) : error ? (
+                <div style={{ gridColumn: "1 / -1", padding: "120px 0", textAlign: "center", color: "rgba(255,249,250,0.4)" }}>
+                  <p style={{ fontSize: "14px", letterSpacing: "0.1em" }}>{error}</p>
+                  <button onClick={() => window.location.reload()} style={{ marginTop: "24px", background: "none", border: "0.5px solid rgba(230, 122, 154, 0.3)", borderRadius: "100px", padding: "12px 32px", color: "#e67a9a", cursor: "pointer", letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase" }} className="reset-btn">RETRY</button>
+                </div>
+              ) : (
               <AnimatePresence mode="popLayout">
                 {filteredProducts.map((prod) => (
                   <motion.div 
                     layout
                     key={prod.id}
-                    onClick={() => navigate(`/product/${prod.id}`)}
+                    onClick={() => navigate(`/product/${prod.slug}`)}
                     initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
                     animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
                     exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
@@ -215,7 +239,7 @@ export default function Womenswear() {
                   >
                     {/* Rounded Image Borders for softer aesthetic */}
                     <div style={{ width: "100%", aspectRatio: "3/4", overflow: "hidden", position: "relative", marginBottom: "20px", background: "rgba(230, 122, 154, 0.03)", borderRadius: "16px", border: "1px solid rgba(230, 122, 154, 0.05)", boxShadow: "0 10px 30px rgba(0,0,0,0.2)" }}>
-                      <img src={prod.image} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s ease" }} className="product-image" />
+                      <img src={prod.images?.[0]?.url || fallbackImage} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s ease" }} className="product-image" onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage; }} />
                       
                       {/* Chic View Overlay */}
                       <div style={{ position: "absolute", inset: 0, background: "rgba(18, 9, 12, 0.25)", opacity: 0, transition: "opacity 0.5s", display: "flex", alignItems: "center", justifyContent: "center" }} className="product-overlay">
@@ -223,25 +247,32 @@ export default function Womenswear() {
                       </div>
 
                       <div style={{ position: "absolute", top: "16px", left: "16px", background: "rgba(0,0,0,0.3)", border: "0.5px solid rgba(230, 122, 154, 0.15)", backdropFilter: "blur(10px)", padding: "6px 12px", fontSize: "9px", letterSpacing: "0.2em", color: "#e67a9a", borderRadius: "100px" }}>
-                        {prod.tag}
+                        {prod.tag.replace('_', ' ')}
                       </div>
                     </div>
                     {/* Delicate Typography for Product Info */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                       <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "20px", fontWeight: 400, letterSpacing: "0.02em", margin: 0, color: "#fff9fa" }}>{prod.name}</h3>
-                      <span style={{ fontSize: "13px", color: "rgba(255,249,250,0.7)", fontWeight: 300, letterSpacing: "0.05em", fontFamily: "'Jost', sans-serif" }}>${prod.price.toLocaleString()}</span>
+                      <span style={{ fontSize: "13px", color: "rgba(255,249,250,0.7)", fontWeight: 300, letterSpacing: "0.05em", fontFamily: "'Jost', sans-serif" }}>
+                        {prod.salePrice ? (
+                          <><span style={{ textDecoration: "line-through", color: "rgba(255,249,250,0.3)", marginRight: "8px" }}>₹{Number(prod.basePrice).toLocaleString()}</span>₹{Number(prod.salePrice).toLocaleString()}</>
+                        ) : (
+                          <>₹{Number(prod.basePrice).toLocaleString()}</>
+                        )}
+                      </span>
                     </div>
-                    <div style={{ fontSize: "10px", color: "rgba(230, 122, 154, 0.6)", marginTop: "6px", letterSpacing: "0.15em", textTransform: "uppercase" }}>{prod.category}</div>
+                    <div style={{ fontSize: "10px", color: "rgba(230, 122, 154, 0.6)", marginTop: "6px", letterSpacing: "0.15em", textTransform: "uppercase" }}>{prod.category.name}</div>
                   </motion.div>
                 ))}
               </AnimatePresence>
+              )}
             </motion.div>
             
             {filteredProducts.length === 0 && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ padding: "120px 0", textAlign: "center", color: "rgba(255,249,250,0.4)" }}>
                 <SlidersHorizontal size={32} color="rgba(230, 122, 154, 0.2)" style={{ margin: "0 auto 20px" }} />
                 <p style={{ fontSize: "14px", letterSpacing: "0.1em", textTransform: "uppercase" }}>No pieces match your exact criteria.</p>
-                <button onClick={() => { setActiveCategory("ALL"); setMaxPrice(2500); setSortBy("featured"); }} style={{ marginTop: "24px", background: "none", border: "0.5px solid rgba(230, 122, 154, 0.3)", borderRadius: "100px", padding: "12px 32px", color: "#e67a9a", cursor: "pointer", letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase", transition: "all 0.4s ease" }} className="reset-btn">
+                <button onClick={() => { setActiveCategory("ALL"); setMaxPrice(10000); setSortBy("featured"); }} style={{ marginTop: "24px", background: "none", border: "0.5px solid rgba(230, 122, 154, 0.3)", borderRadius: "100px", padding: "12px 32px", color: "#e67a9a", cursor: "pointer", letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase", transition: "all 0.4s ease" }} className="reset-btn">
                   CLEAR FILTERS
                 </button>
               </motion.div>

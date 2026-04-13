@@ -667,8 +667,8 @@ const Home: React.FC = () => {
 
         <div style={styles.categoriesContainer} className="categories-container">
           {[
-            { id: "men", title: "MENSWEAR", image: Image3 },
-            { id: "women", title: "WOMENSWEAR", image: Image2 },
+            { id: "men", title: "MEN", image: Image3 },
+            { id: "women", title: "WOMEN", image: Image2 },
             { id: "accessories", title: "ACCESSORIES", image: productImage }
           ].map((cat) => {
             const isZoomed = zoomedCategory === cat.id;

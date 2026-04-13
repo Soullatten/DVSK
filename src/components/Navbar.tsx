@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, useCallback, useId, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ShoppingBag, Search, X } from 'lucide-react';
+import { ShoppingBag, Search, X, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
 import CartSidebar from './CartSidebar';
+import WishlistSidebar from './WishlistSidebar';
+import { useCart } from '../context/CartContext';
 
 // ─── Set your logo path here ──────────────────────────────────────────────────
 import logo from '../assets/Secondary_logo.svg';
@@ -14,11 +16,12 @@ const LOGO_SRC = logo;
 
 // ─── Menu items ───────────────────────────────────────────────────────────────
 const MENU_ITEMS = [
-  { label: 'Home', ariaLabel: 'Go to Home', link: '/' },
   { label: 'Women', ariaLabel: 'Go to Women', link: '/women' },
   { label: 'Men', ariaLabel: 'Go to Men', link: '/men' },
   { label: 'Accessories', ariaLabel: 'Go to Accessories', link: '/accessories' },
   { label: 'About', ariaLabel: 'Go to About', link: '/about' },
+  { label: 'Campaigns', ariaLabel: 'Go to Campaigns', link: '/campaigns' },
+  { label: 'Services', ariaLabel: 'Go to Client Services', link: '/services' },
 ];
 
 const MENU_SOCIALS = [
@@ -410,7 +413,7 @@ function StaggeredMenu({
         .sm-scope .sm-panel-item {
           position: relative; color: rgba(255,255,255,0.85);
           font-family: 'Cormorant Garamond', serif; font-weight: 300;
-          font-size: clamp(2.8rem, 5vw, 4rem);
+          font-size: clamp(2.2rem, 4vw, 3rem);
           cursor: pointer; line-height: 1; letter-spacing: -1px;
           text-transform: uppercase; display: inline-block;
           text-decoration: none; padding-right: 1.2em;
@@ -431,7 +434,7 @@ function StaggeredMenu({
           opacity: var(--sm-num-opacity, 0);
         }
 
-        .sm-scope .sm-socials { margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .sm-scope .sm-socials { margin-top: 4rem; border-top: 0.5px solid rgba(255,255,255,0.1); padding-top: 2rem; display: flex; flex-direction: column; gap: 0.75rem; }
         .sm-scope .sm-socials-title { margin: 0; font-size: 10px; font-weight: 300; letter-spacing: 0.3em; text-transform: uppercase; color: var(--sm-accent); font-family: 'Jost', sans-serif; }
         .sm-scope .sm-socials-list { list-style: none; margin: 0; padding: 0; display: flex; gap: 1.5rem; flex-wrap: wrap; }
         .sm-scope .sm-socials-link { font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.5); text-decoration: none; letter-spacing: 0.08em; transition: color 0.2s; font-family: 'Jost', sans-serif; }
@@ -596,14 +599,28 @@ function GlassSurface({ children, width = 200, height = 80, borderRadius = 20, b
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(2);
+  const { itemCount: cartCount } = useCart();
+  const [wishlistOpen, setWishlistOpen] = useState(false);
   const navigate = useNavigate(); // ← fixed
   const searchRef = useRef<HTMLInputElement>(null);
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
+    const onScroll = () => {
+      const currentScrollY = window.scrollY;
+      setScrolled(currentScrollY > 10);
+
+      if (currentScrollY > lastScrollY.current && currentScrollY > 150) {
+        setHidden(true);
+      } else {
+        setHidden(false);
+      }
+      lastScrollY.current = currentScrollY;
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
@@ -618,9 +635,9 @@ export default function Navbar() {
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500&display=swap');
 
         .nb-root {
-          position: fixed; top: 0; left: 0; right: 0;
+          position: fixed; left: 0; right: 0;
           height: ${NAVBAR_HEIGHT}px; z-index: 1000;
-          transition: box-shadow 0.4s ease;
+          transition: top 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
         }
         .nb-root::after {
           content: ''; position: absolute; bottom: 0; left: 0; right: 0;
@@ -732,7 +749,10 @@ export default function Navbar() {
         }
       `}</style>
 
-      <nav className={`nb-root ${scrolled ? 'scrolled' : 'top'}`}>
+      <nav
+        className={`nb-root ${scrolled ? 'scrolled' : 'top'}`}
+        style={{ top: hidden ? `-${NAVBAR_HEIGHT * 2}px` : '0px' }}
+      >
 
         <GlassSurface
           className="nb-glass"
@@ -788,9 +808,9 @@ export default function Navbar() {
                 waveAmplitude={1}
                 distortion={1}
                 contour={0.2}
-                lightColor="#3D0080"
-                darkColor="#000000"
-                tintColor="#8B2BE2"
+                lightColor="#ffebab"
+                darkColor="#080808"
+                tintColor="#ffffff"
               />
             </a>
           </div>
@@ -806,6 +826,10 @@ export default function Navbar() {
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
+            </button>
+
+            <button className="nb-icon-btn" aria-label="Open wishlist" onClick={() => setWishlistOpen(true)}>
+              <Star size={18} strokeWidth={1.5} />
             </button>
 
             <button className="nb-icon-btn" aria-label="Open cart" onClick={() => setCartOpen(true)}>
@@ -852,6 +876,8 @@ export default function Navbar() {
                     className="nb-fs-search-input"
                     type="text"
                     placeholder="Search collections..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     autoFocus
                   />
                 </motion.div>
@@ -862,19 +888,37 @@ export default function Navbar() {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 1, delay: 0.4 }}
                 >
-                  <p className="nb-fs-search-title">Popular</p>
+                  <p className="nb-fs-search-title">
+                    {searchQuery ? `RESULTS FOR "${searchQuery.toUpperCase()}"` : "Popular"}
+                  </p>
                   <div className="nb-fs-search-tags">
-                    {['Outerwear', 'Silk Dresses', 'Heavy Knits', 'Accessories'].map((tag, i) => (
-                      <motion.span
-                        key={tag}
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.5 + (i * 0.1), duration: 0.6 }}
-                        className="nb-fs-tag"
-                      >
-                        {tag}
-                      </motion.span>
-                    ))}
+                    {searchQuery ? (
+                      ['Tailored Outerwear', 'Silk Dress Noir', 'Obelisk Boots'].map((tag, i) => (
+                        <motion.span
+                          key={'res' + tag}
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: i * 0.1, duration: 0.6 }}
+                          className="nb-fs-tag"
+                          onClick={() => { setSearchOpen(false); navigate('/product/4'); }}
+                        >
+                          {tag}
+                        </motion.span>
+                      ))
+                    ) : (
+                      ['Outerwear', 'Silk Dresses', 'Heavy Knits', 'Accessories'].map((tag, i) => (
+                        <motion.span
+                          key={tag}
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0.5 + (i * 0.1), duration: 0.6 }}
+                          className="nb-fs-tag"
+                          onClick={() => setSearchQuery(tag)}
+                        >
+                          {tag}
+                        </motion.span>
+                      ))
+                    )}
                   </div>
                 </motion.div>
               </div>
@@ -929,6 +973,7 @@ export default function Navbar() {
       ) : null}
 
       <CartSidebar isOpen={cartOpen} onClose={() => setCartOpen(false)} />
+      <WishlistSidebar isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
     </>
   );
 }

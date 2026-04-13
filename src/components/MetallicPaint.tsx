@@ -232,7 +232,7 @@ function processImage(img: HTMLImageElement): ImageData {
   }
 
   const u = new Float32Array(size);
-  const ITERATIONS = 200;
+  const ITERATIONS = 10;
   const C = 0.01;
   const omega = 1.85;
 

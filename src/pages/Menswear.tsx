@@ -3,28 +3,15 @@ import { useNavigate } from "react-router-dom";
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Loader2 } from 'lucide-react';
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { productsApi } from "../api/products";
+import type { Product } from "../api/types";
 
-import productImage from '../assets/image6.png';
-import Image2 from '../assets/image7.avif';
-import Image3 from '../assets/image01.png';
-import Image4 from '../assets/image3.png';
-import Image5 from '../assets/image03.png';
-
-const PRODUCTS = [
-  { id: 1, name: "OBSIDIAN TRENCH", price: 1850, category: "OUTERWEAR", image: Image3, tag: "NEW SEASON" },
-  { id: 2, name: "CASHMERE OVERCOAT", price: 2200, category: "OUTERWEAR", image: Image2, tag: "CORE" },
-  { id: 3, name: "SILK NOIL SHIRT", price: 650, category: "SHIRTS", image: Image4, tag: "ESSENTIALS" },
-  { id: 4, name: "PLEATED TROUSERS", price: 850, category: "BOTTOMS", image: productImage, tag: "FW/26" },
-  { id: 5, name: "TEXTURED BLAZER", price: 1400, category: "SUITING", image: Image5, tag: "FW/26" },
-  { id: 6, name: "MERINO TURTLENECK", price: 550, category: "KNITWEAR", image: Image2, tag: "CORE" },
-  { id: 7, name: "COTTON POPLIN SHIRT", price: 450, category: "SHIRTS", image: Image4, tag: "ESSENTIALS" },
-  { id: 8, name: "WOOL CARGO PANTS", price: 750, category: "BOTTOMS", image: productImage, tag: "NEW SEASON" },
-];
-
-const CATEGORIES = ["ALL", "OUTERWEAR", "SUITING", "SHIRTS", "KNITWEAR", "BOTTOMS"];
+// Fallback image for when Unsplash URLs might be slow
+import fallbackImage from '../assets/image01.png';
+import heroImage from '../assets/image01.png';
 
 const SORT_OPTIONS = [
   { label: "Featured", value: "featured" },
@@ -39,8 +26,11 @@ export default function Menswear() {
   const yParallax = useTransform(scrollYProgress, [0, 1], [0, 300]);
   const opacityParallax = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("ALL");
-  const [maxPrice, setMaxPrice] = useState(2500);
+  const [maxPrice, setMaxPrice] = useState(10000);
   const [sortBy, setSortBy] = useState("featured");
 
   useEffect(() => {
@@ -56,13 +46,35 @@ export default function Menswear() {
     return () => lenis.destroy();
   }, []);
 
-  const filteredProducts = PRODUCTS.filter(p => {
-    if (activeCategory !== "ALL" && p.category !== activeCategory) return false;
-    if (p.price > maxPrice) return false;
+  // Fetch live products from backend
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        setLoading(true);
+        const res = await productsApi.getProducts({ gender: 'MEN', limit: 50 });
+        setProducts(res.data);
+      } catch (err: any) {
+        console.error('Failed to fetch products:', err);
+        setError('Failed to load products. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProducts();
+  }, []);
+
+  // Extract unique categories from live data
+  const CATEGORIES = ["ALL", ...Array.from(new Set(products.map(p => p.category.name.toUpperCase())))];
+
+  const filteredProducts = products.filter(p => {
+    if (activeCategory !== "ALL" && p.category.name.toUpperCase() !== activeCategory) return false;
+    if (Number(p.salePrice || p.basePrice) > maxPrice) return false;
     return true;
   }).sort((a, b) => {
-    if (sortBy === "price-low") return a.price - b.price;
-    if (sortBy === "price-high") return b.price - a.price;
+    const priceA = Number(a.salePrice || a.basePrice);
+    const priceB = Number(b.salePrice || b.basePrice);
+    if (sortBy === "price-low") return priceA - priceB;
+    if (sortBy === "price-high") return priceB - priceA;
     return 0; // featured
   });
 
@@ -74,7 +86,7 @@ export default function Menswear() {
         {/* Hero Section */}
         <div style={{ position: "relative", width: "100%", height: "70vh", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <motion.div style={{ position: "absolute", inset: 0, y: yParallax, opacity: opacityParallax }}>
-            <img src={Image3} alt="Menswear Hero" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.55) contrast(1.1)" }} />
+            <img src={heroImage} alt="Menswear Hero" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.55) contrast(1.1)" }} />
           </motion.div>
 
           {/* Vignette Overlay for Depth */}
@@ -89,7 +101,7 @@ export default function Menswear() {
           >
             <p style={{ fontSize: "11px", letterSpacing: "0.5em", color: "rgba(255,255,255,0.7)", marginBottom: "24px" }}>DVSK CLO.</p>
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(4.5rem, 12vw, 11rem)", lineHeight: 0.85, fontWeight: 300, margin: 0, textTransform: "uppercase", textShadow: "0 20px 40px rgba(0,0,0,0.5)" }}>
-              Menswear
+              Men
             </h1>
           </motion.div>
         </div>
@@ -139,8 +151,8 @@ export default function Menswear() {
                 <input
                   type="range"
                   min="0"
-                  max="2500"
-                  step="50"
+                  max="10000"
+                  step="100"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(Number(e.target.value))}
                   className="premium-slider"
@@ -190,12 +202,25 @@ export default function Menswear() {
             </div>
 
             <motion.div layout style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "50px 30px" }}>
+              {loading ? (
+                <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "120px 0", gap: "20px" }}>
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
+                    <Loader2 size={28} color="rgba(139, 43, 226, 0.6)" />
+                  </motion.div>
+                  <span style={{ fontSize: "11px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>Loading collection...</span>
+                </div>
+              ) : error ? (
+                <div style={{ gridColumn: "1 / -1", padding: "120px 0", textAlign: "center", color: "rgba(255,255,255,0.4)" }}>
+                  <p style={{ fontSize: "14px", letterSpacing: "0.1em" }}>{error}</p>
+                  <button onClick={() => window.location.reload()} style={{ marginTop: "24px", background: "rgba(139, 43, 226, 0.1)", border: "1px solid rgba(139, 43, 226, 0.4)", borderRadius: "100px", padding: "12px 32px", color: "#fff", cursor: "pointer", letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase" }} className="reset-btn">RETRY</button>
+                </div>
+              ) : (
               <AnimatePresence mode="popLayout">
                 {filteredProducts.map((prod) => (
                   <motion.div
                     layout
                     key={prod.id}
-                    onClick={() => navigate(`/product/${prod.id}`)}
+                    onClick={() => navigate(`/product/${prod.slug}`)}
                     initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
                     animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
                     exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
@@ -204,7 +229,7 @@ export default function Menswear() {
                     className="product-wrapper"
                   >
                     <div style={{ width: "100%", aspectRatio: "3/4", overflow: "hidden", position: "relative", marginBottom: "16px", background: "rgba(255,255,255,0.02)" }}>
-                      <img src={prod.image} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 1s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease" }} className="product-image" />
+                      <img src={prod.images?.[0]?.url || fallbackImage} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 1s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease" }} className="product-image" onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage; }} />
 
                       {/* Interactive View Overlay */}
                       <div style={{ position: "absolute", inset: 0, background: "rgba(8,8,8,0.4)", opacity: 0, transition: "opacity 0.4s", display: "flex", alignItems: "center", justifyContent: "center" }} className="product-overlay">
@@ -212,24 +237,31 @@ export default function Menswear() {
                       </div>
 
                       <div style={{ position: "absolute", top: "15px", left: "15px", background: "rgba(0,0,0,0.4)", border: "0.5px solid rgba(255,255,255,0.1)", backdropFilter: "blur(8px)", padding: "4px 8px", fontSize: "9px", letterSpacing: "0.15em", color: "rgba(255,255,255,0.9)" }}>
-                        {prod.tag}
+                        {prod.tag.replace('_', ' ')}
                       </div>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                       <h3 style={{ fontSize: "13px", fontWeight: 400, letterSpacing: "0.1em", margin: 0, textTransform: "uppercase" }}>{prod.name}</h3>
-                      <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", fontWeight: 300, letterSpacing: "0.05em" }}>${prod.price.toLocaleString()}</span>
+                      <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", fontWeight: 300, letterSpacing: "0.05em" }}>
+                        {prod.salePrice ? (
+                          <><span style={{ textDecoration: "line-through", color: "rgba(255,255,255,0.3)", marginRight: "8px" }}>₹{Number(prod.basePrice).toLocaleString()}</span>₹{Number(prod.salePrice).toLocaleString()}</>
+                        ) : (
+                          <>₹{Number(prod.basePrice).toLocaleString()}</>
+                        )}
+                      </span>
                     </div>
-                    <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", marginTop: "8px", letterSpacing: "0.15em", textTransform: "uppercase" }}>{prod.category}</div>
+                    <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", marginTop: "8px", letterSpacing: "0.15em", textTransform: "uppercase" }}>{prod.category.name}</div>
                   </motion.div>
                 ))}
               </AnimatePresence>
+              )}
             </motion.div>
 
             {filteredProducts.length === 0 && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ padding: "120px 0", textAlign: "center", color: "rgba(255,255,255,0.4)" }}>
                 <SlidersHorizontal size={32} color="rgba(255,255,255,0.1)" style={{ margin: "0 auto 20px" }} />
                 <p style={{ fontSize: "14px", letterSpacing: "0.1em", textTransform: "uppercase" }}>No results match your exact criteria.</p>
-                <button onClick={() => { setActiveCategory("ALL"); setMaxPrice(2500); setSortBy("featured"); }} style={{ marginTop: "24px", background: "rgba(139, 43, 226, 0.1)", border: "1px solid rgba(139, 43, 226, 0.4)", borderRadius: "100px", padding: "12px 32px", color: "#fff", cursor: "pointer", letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase", transition: "all 0.3s ease" }} className="reset-btn">
+                <button onClick={() => { setActiveCategory("ALL"); setMaxPrice(10000); setSortBy("featured"); }} style={{ marginTop: "24px", background: "rgba(139, 43, 226, 0.1)", border: "1px solid rgba(139, 43, 226, 0.4)", borderRadius: "100px", padding: "12px 32px", color: "#fff", cursor: "pointer", letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase", transition: "all 0.3s ease" }} className="reset-btn">
                   CLEAR ALL FILTERS
                 </button>
               </motion.div>

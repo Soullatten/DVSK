@@ -10,6 +10,9 @@ import Womenswear from './pages/Womenswear.tsx'
 import Accessories from './pages/Accessories.tsx'
 import ProductDetail from './pages/ProductDetail.tsx'
 import Checkout from './pages/Checkout.tsx'
+import Campaigns from './pages/Campaigns.tsx'
+import ClientServices from './pages/ClientServices.tsx'
+import SizeGuide from './pages/SizeGuide.tsx'
 import PageWrapper from './components/PageWrapper.tsx'
 
 export default function AppRoutes() {
@@ -28,6 +31,9 @@ export default function AppRoutes() {
         <Route path="/accessories" element={<PageWrapper><Accessories /></PageWrapper>} />
         <Route path="/product/:id" element={<PageWrapper><ProductDetail /></PageWrapper>} />
         <Route path="/checkout" element={<PageWrapper><Checkout /></PageWrapper>} />
+        <Route path="/campaigns" element={<PageWrapper><Campaigns /></PageWrapper>} />
+        <Route path="/services" element={<PageWrapper><ClientServices /></PageWrapper>} />
+        <Route path="/size-guide" element={<PageWrapper><SizeGuide /></PageWrapper>} />
       </Routes>
     </AnimatePresence>
   );

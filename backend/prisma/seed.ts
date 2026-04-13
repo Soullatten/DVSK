@@ -21,25 +21,25 @@ async function main() {
   const menTops = await prisma.category.upsert({
     where: { slug: "men-tops" },
     update: {},
-    create: { name: "Tops", slug: "men-tops", description: "Men's Tops", parentId: men.id },
+    create: { name: "Men's Tops", slug: "men-tops", description: "Men's Tops", parentId: men.id },
   });
 
   const menBottoms = await prisma.category.upsert({
     where: { slug: "men-bottoms" },
     update: {},
-    create: { name: "Bottoms", slug: "men-bottoms", description: "Men's Bottoms", parentId: men.id },
+    create: { name: "Men's Bottoms", slug: "men-bottoms", description: "Men's Bottoms", parentId: men.id },
   });
 
   const womenTops = await prisma.category.upsert({
     where: { slug: "women-tops" },
     update: {},
-    create: { name: "Tops", slug: "women-tops", description: "Women's Tops", parentId: women.id },
+    create: { name: "Women's Tops", slug: "women-tops", description: "Women's Tops", parentId: women.id },
   });
 
   const womenDresses = await prisma.category.upsert({
     where: { slug: "women-dresses" },
     update: {},
-    create: { name: "Dresses", slug: "women-dresses", description: "Women's Dresses", parentId: women.id },
+    create: { name: "Women's Dresses", slug: "women-dresses", description: "Women's Dresses", parentId: women.id },
   });
 
   // Men's Products

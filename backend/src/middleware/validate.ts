@@ -6,7 +6,10 @@ export function validate(schema: ZodSchema, source: "body" | "query" | "params" 
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = schema.parse(req[source]);
-      req[source] = data;
+      // Express 5: req.query is read-only, so only assign for body/params
+      if (source !== "query") {
+        (req as any)[source] = data;
+      }
       next();
     } catch (err) {
       if (err instanceof ZodError) {

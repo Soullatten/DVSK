@@ -345,6 +345,14 @@ const InfiniteMarquee: React.FC<{ text: string, speed?: number, size?: string }>
 // ============================================================================
 export default function About() {
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    // As a backup for slow-loading fonts/images fixing ScrollTrigger layout heights
+    const timer = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // ---------------------------------------------------------
   // REFS FOR INTRICATE GSAP TIMELINES & FRAMER SPRINGS
@@ -355,6 +363,11 @@ export default function About() {
   const heroRef = useRef<HTMLDivElement>(null);
   const heroMainTitleRef = useRef<HTMLHeadingElement>(null);
   const heroSubTitleRef = useRef<HTMLParagraphElement>(null);
+  
+  // Parallax for Hero Background (Lightweight fallback)
+  const { scrollYProgress: heroScroll } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
+  const heroBgY = useTransform(heroScroll, [0, 1], ["0%", "40%"]);
+  const heroBgScale = useTransform(heroScroll, [0, 1], [1, 1.2]);
 
   // Chapter 1: Pinned Horizontal History Track
   const horizontalSectionRef = useRef<HTMLDivElement>(null);
@@ -432,65 +445,20 @@ export default function About() {
         }
       });
 
-      // Chapter 1: The Massive Horizontal Timeline Lock
-      if (horizontalSectionRef.current && trackRef.current) {
-        const fullTrackWidth = trackRef.current.scrollWidth;
-        const viewportW = window.innerWidth;
-        const scrollDistanceRequired = fullTrackWidth - viewportW;
-
-        gsap.to(trackRef.current, {
-          x: -scrollDistanceRequired,
-          ease: "none",
-          scrollTrigger: {
-            trigger: horizontalSectionRef.current,
-            start: "top top",
-            end: () => "+=" + scrollDistanceRequired * 1.5, // 1.5x slower scrolling experience
-            pin: true,
-            scrub: 1,
-            anticipatePin: 1,
-            invalidateOnRefresh: true,
-          }
-        });
-
-        // Background Text moving at opposite speed
-        gsap.utils.toArray(".timeline-bg-text").forEach((el: any) => {
-          gsap.to(el, {
-            x: scrollDistanceRequired * 0.4,
-            ease: "none",
-            scrollTrigger: {
-              trigger: horizontalSectionRef.current,
-              start: "top top",
-              end: () => "+=" + scrollDistanceRequired * 1.5,
-              scrub: 1,
-            }
-          });
-        });
-
-        // Floating Micro-images floating faster
-        gsap.utils.toArray(".timeline-micro-img").forEach((el: any) => {
-          gsap.to(el, {
-            x: -scrollDistanceRequired * 0.2,
-            rotation: 15,
-            ease: "none",
-            scrollTrigger: {
-              trigger: horizontalSectionRef.current,
-              start: "top top",
-              end: () => "+=" + scrollDistanceRequired * 1.5,
-              scrub: 1,
-            }
-          });
-        });
-      }
-
-      // Cinematic image reveals globally
+      // Removed the highly experimental Horizontal Scroll Lock that caused blank screens.
+      // Now falling back to standard vertical intersection observers for the images.
+      
+      // Cinematic image reveals globally proper GSAP container properties
       gsap.utils.toArray(".reveal-img-block").forEach((el: any) => {
         gsap.fromTo(el, 
-          { clipPath: "polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%)", scale: 1.2 },
+          { clipPath: "polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%)", scale: 1.2, rotationX: 25, z: -100, transformPerspective: 1000 },
           { 
             clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)", 
             scale: 1, 
-            duration: 1.5,
-            ease: "power4.inOut",
+            rotationX: 0,
+            z: 0,
+            duration: 1.8,
+            ease: "expo.out",
             scrollTrigger: {
               trigger: el,
               start: "top 85%",
@@ -526,23 +494,20 @@ export default function About() {
           ========================================================================= */}
       <section ref={heroRef} style={{ position: "relative", width: "100vw", height: "130vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         
-        {/* Underlayer WebGL Canvas: PixelBlast Particle Engine */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
-          <PixelBlast 
-            variant="square" 
-            pixelSize={3} 
-            patternScale={2} 
-            patternDensity={1} 
-            liquid={true} 
-            liquidStrength={0.3} 
-            liquidRadius={2} 
-            rippleSpeed={0.8} 
-            rippleIntensityScale={2}
-            color="#5a5a5a" 
-            transparent={true} 
-            noiseAmount={0.2}
-            edgeFade={0.6}
-          />
+        {/* Ambient 3D Parallax Space (High Performance & Responsive) */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 0, overflow: "hidden" }}>
+            <motion.div 
+              style={{ 
+                width: "100%", 
+                height: "130%", 
+                top: "-15%",
+                position: "absolute",
+                background: "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22 opacity=%220.08%22/%3E%3C/svg%3E'), radial-gradient(circle at center, #2e2e2e 0%, #040404 80%)",
+                backgroundBlendMode: "screen",
+                y: heroBgY,
+                scale: heroBgScale
+              }} 
+            />
         </div>
 
         {/* Shadow Overlays to blend with the background seamlessly */}
@@ -573,23 +538,21 @@ export default function About() {
       <div style={{ height: "30vh", width: "100%" }} />
 
       {/* =========================================================================
-          SECTION 2: CHAPTER 1 - THE HORIZONTAL LORE TIMELINE
+          SECTION 2: CHAPTER 1 - THE VERTICAL LORE TIMELINE
           ========================================================================= */}
-      <section ref={horizontalSectionRef} style={{ position: "relative", width: "100%", height: "100vh", overflow: "hidden" }}>
+      <section style={{ position: "relative", width: "100%", padding: "10vh 5vw", overflow: "hidden" }}>
         
-        {/* Dynamic Horizontal Track */}
-        <div ref={trackRef} style={{ display: "flex", height: "100%", width: "max-content", paddingLeft: "10vw", paddingRight: "30vw", alignItems: "center", gap: "20vw", position: "relative" }}>
-          
-          {/* Deep Parallax Shadow Text */}
-          <div className="timeline-bg-text" style={{ position: "absolute", top: "50%", left: "0%", transform: "translateY(-50%)", whiteSpace: "nowrap", fontFamily: "'Cormorant Garamond', serif", fontSize: "50vw", color: "transparent", WebkitTextStroke: "2px rgba(255,255,255,0.02)", zIndex: 0 }}>
-             DECONSTRUCT THE SILHOUETTE
-          </div>
+        {/* Deep Parallax Shadow Text */}
+        <div className="timeline-bg-text" style={{ position: "absolute", top: "10%", left: "-20%", whiteSpace: "nowrap", fontFamily: "'Cormorant Garamond', serif", fontSize: "30vw", color: "transparent", WebkitTextStroke: "2px rgba(255,255,255,0.02)", zIndex: 0, pointerEvents: "none" }}>
+           DECONSTRUCT THE SILHOUETTE
+        </div>
 
+        <div style={{ display: "flex", flexDirection: "column", gap: "15vh", position: "relative", zIndex: 10, maxWidth: "1600px", margin: "0 auto" }}>
           {COMPREHENSIVE_DVSK_STORY.map((story, i) => (
-             <div key={i} style={{ display: "flex", gap: "6vw", alignItems: "center", zIndex: 10, width: "85vw" }}>
+             <div key={i} style={{ display: "flex", flexWrap: "wrap", flexDirection: i % 2 === 0 ? "row" : "row-reverse", gap: "8vw", alignItems: "center", width: "100%" }}>
                 
                 {/* Visual Block */}
-                <div style={{ position: "relative", width: "40vw", height: "70vh", overflow: "hidden" }} className="reveal-img-block">
+                <div style={{ position: "relative", width: "100%", maxWidth: "45vw", minWidth: "300px", height: "auto", maxHeight: "65vh", aspectRatio: "4/5", overflow: "hidden", flex: "1 1 300px" }} className="reveal-img-block">
                   <img 
                     src={[image4, image1, image2, image5, image3][i % 5]} 
                     style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(80%) sepia(10%) contrast(1.2)" }} 
@@ -598,35 +561,35 @@ export default function About() {
                   {/* Glitch Overlay */}
                   <div style={{ position: "absolute", inset: 0, opacity: 0.1, background: "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')", mixBlendMode: "overlay" }} />
                   {/* Brutalist Number Block */}
-                  <div style={{ position: "absolute", bottom: "-20px", left: "-20px", padding: "40px", background: "#fff", color: "#000" }}>
-                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "4rem", fontWeight: "bold", lineHeight: 0.8 }}>{story.phase}</span>
+                  <div style={{ position: "absolute", bottom: i % 2 === 0 ? "10px" : "auto", top: i % 2 !== 0 ? "10px" : "auto", left: i % 2 === 0 ? "10px" : "auto", right: i % 2 !== 0 ? "10px" : "auto", padding: "clamp(15px, 3vw, 40px)", background: "#fff", color: "#000", zIndex: 10 }}>
+                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 5vw, 4rem)", fontWeight: "bold", lineHeight: 0.8 }}>{story.phase}</span>
                   </div>
 
                   {/* Floating Micro-image array for extra depth */}
                   {i % 2 === 0 && (
-                    <div className="timeline-micro-img" style={{ position: "absolute", top: "10%", right: "-10%", width: "150px", height: "200px", border: "1px solid rgba(255,255,255,0.3)", padding: "10px", background: "rgba(0,0,0,0.8)", backdropFilter: "blur(10px)" }}>
+                    <div className="timeline-micro-img" style={{ position: "absolute", top: "10%", right: "-5%", width: "clamp(80px, 15vw, 150px)", aspectRatio: "3/4", border: "1px solid rgba(255,255,255,0.3)", padding: "10px", background: "rgba(0,0,0,0.8)", backdropFilter: "blur(10px)" }}>
                       <img src={[image1, image5, image2][i % 3]} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "invert(100%)" }} alt="Micro" />
                     </div>
                   )}
                 </div>
 
                 {/* Text Block */}
-                <div style={{ maxWidth: "500px" }}>
-                   <div style={{ display: "inline-flex", alignItems: "center", gap: "10px", marginBottom: "30px" }}>
+                <div style={{ flex: "1 1 350px", maxWidth: "600px", minWidth: "300px" }}>
+                   <div style={{ display: "inline-flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
                      <div style={{ width: "40px", height: "1px", background: "#8B2BE2" }} />
                      <span style={{ fontSize: "14px", letterSpacing: "0.2em", color: "#8B2BE2", fontWeight: 600 }}>YEAR {story.year}</span>
                    </div>
-                   <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 4vw, 4rem)", lineHeight: 1.1, marginBottom: "30px", textTransform: "uppercase", color: "#fff" }}>
+                   <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 6vw, 4rem)", lineHeight: 1.1, marginBottom: "30px", textTransform: "uppercase", color: "#fff" }}>
                      {story.title}
                    </h2>
-                   <p style={{ fontSize: "16px", lineHeight: 1.8, color: "rgba(255,255,255,0.5)", fontWeight: 300, marginBottom: "40px" }}>
+                   <p style={{ fontSize: "clamp(14px, 2vw, 16px)", lineHeight: 1.8, color: "rgba(255,255,255,0.5)", fontWeight: 300, marginBottom: "40px" }}>
                      {story.text}
                    </p>
                    
                    {/* Details Grid */}
-                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "20px" }}>
+                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "15px", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "20px" }}>
                      {story.details.map((detail, dIdx) => (
-                       <div key={dIdx} style={{ fontSize: "12px", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>
+                       <div key={dIdx} style={{ fontSize: "11px", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>
                          <span style={{ color: "#8B2BE2", marginRight: "10px" }}>//</span> {detail}
                        </div>
                      ))}
@@ -645,22 +608,25 @@ export default function About() {
       <section ref={chromeSectionRef} style={{ position: "relative", width: "100vw", height: "160vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginTop: "10vh" }}>
          
          <motion.div style={{ position: "absolute", inset: 0, scale: chromeScale, filter: chromeBlur, zIndex: 0 }}>
-            {/* The Ultimate WebGL Chrome Filter using the custom component */}
-            <MetallicPaint 
-              imageSrc={image3}
-              mouseAnimation={true}
-              blur={0.05}
-              liquid={0.9}
-              speed={0.5}
-              brightness={1.6}
-              contrast={0.65}
-              lightColor="#4E00A6"
-              darkColor="#020202"
-              tintColor="#9F45F2"
-              distortion={2.0}
-              waveAmplitude={1.5}
-              refraction={0.06}
-            />
+            {/* The Ultimate CSS 3D Depth Engine Filter */}
+            <div style={{ width: '100%', height: '100%', overflow: 'hidden', background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center', perspective: '1000px' }}>
+              <motion.div 
+                style={{
+                  width: '90vw',
+                  height: '80vh',
+                  maxWidth: '800px',
+                  backgroundImage: `url(${image3})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: '0 40px 150px -20px rgba(139, 43, 226, 0.4)',
+                  rotateX: useTransform(chromeScroll, [0, 1], [30, -30]),
+                  rotateY: useTransform(chromeScroll, [0, 1], [-15, 15]),
+                  z: useTransform(chromeScroll, [0, 1], [-300, 100]),
+                }}
+              />
+              <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(78, 0, 166, 0.15) 0%, transparent 60%)', mixBlendMode: 'screen', pointerEvents: 'none' }} />
+            </div>
             {/* Dark Mask Top and Bottom */}
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "30vh", background: "linear-gradient(to bottom, #040404 0%, transparent 100%)" }} />
             <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "30vh", background: "linear-gradient(to top, #040404 0%, transparent 100%)" }} />
