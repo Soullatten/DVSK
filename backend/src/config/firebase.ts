@@ -1,15 +1,15 @@
-import admin from "firebase-admin";
-import { env } from "../env.js";
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { createRequire } from 'module';
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: env.FIREBASE_PROJECT_ID,
-      clientEmail: env.FIREBASE_CLIENT_EMAIL,
-      privateKey: env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    }),
+const require = createRequire(import.meta.url);
+const serviceAccount = require('../../firebase-service-account.json');
+
+if (!getApps().length) {
+  initializeApp({
+    credential: cert(serviceAccount),
   });
 }
 
-export const firebaseAdmin = admin;
-export const firebaseAuth = admin.auth();
+export const auth = getAuth();
+export const firebaseAuth = getAuth();

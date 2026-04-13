@@ -3,56 +3,69 @@ import { useParams, useNavigate } from "react-router-dom";
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
-import { ArrowLeft, ChevronDown, Plus, Minus, Star, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Plus, Minus, Star, ArrowRight, Loader2, Check } from 'lucide-react';
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
+import { productsApi } from "../api/products";
+import type { Product } from "../api/types";
 
-// Images
-import imageMain from '../assets/image6.png';
-import imageAlt1 from '../assets/image7.avif';
-import imageAlt2 from '../assets/image3.png';
-import imageAlt3 from '../assets/image01.png';
-import imageAlt4 from '../assets/image03.png';
-
-const GALLERY = [imageMain, imageAlt1, imageAlt2, imageAlt3, imageAlt4];
-const SIZES = ["S", "M", "L", "XL"];
-
-const CROSS_SELL = [
-  { id: 2, name: "CASHMERE OVERCOAT", price: 2200, category: "OUTERWEAR", image: imageAlt1 },
-  { id: 3, name: "SILK NOIL SHIRT", price: 650, category: "SHIRTS", image: imageAlt2 },
-  { id: 4, name: "PLEATED TROUSERS", price: 850, category: "BOTTOMS", image: imageMain },
-  { id: 5, name: "TEXTURED BLAZER", price: 1400, category: "SUITING", image: imageAlt4 },
-];
-
-const MOCK_REVIEWS = [
-  { id: 1, author: "A. Kingston", rating: 5, date: "Oct 24, 2025", text: "The architectural drape of this piece is impeccable. The weight of the gabardine justifies the price point entirely." },
-  { id: 2, author: "M. Russo", rating: 5, date: "Sep 12, 2025", text: "Perfect tailored fit. Feels highly structural but retains movement." }
-];
+import fallbackImage from '../assets/image6.png';
 
 export default function ProductDetail() {
-  const { id } = useParams();
+  const { id: slug } = useParams();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
 
-  // Gallery Scroll Tracker
   const { scrollYProgress } = useScroll({
     target: galleryRef,
     offset: ["start center", "end center"]
   });
   const indicatorHeight = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
 
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [activeAccordion, setActiveAccordion] = useState<string | null>("details");
+  const [addedToCart, setAddedToCart] = useState(false);
+  const [sizeError, setSizeError] = useState(false);
 
-  const { isWishlisted, addItem, removeItem } = useWishlist();
-  const numericId = parseInt(id || '1', 10);
+  const { addItem } = useCart();
+  const { isWishlisted, addItem: addWishlistItem, removeItem: removeWishlistItem } = useWishlist();
+  const numericId = parseInt(slug || '1', 10);
   const isSaved = isWishlisted(numericId);
 
-  // Review form state
   const [reviewText, setReviewText] = useState("");
+
+  // Fetch product from API
+  useEffect(() => {
+    async function fetchProduct() {
+      if (!slug) return;
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await productsApi.getProductBySlug(slug);
+        setProduct(data);
+        // Auto-select first available color
+        if (data.variants?.length) {
+          const colors = [...new Set(data.variants.map(v => v.color))];
+          if (colors.length > 0) setSelectedColor(colors[0]);
+        }
+      } catch (err: any) {
+        console.error('Failed to fetch product:', err);
+        setError('Product not found.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProduct();
+  }, [slug]);
 
   useEffect(() => {
     const lenis = new Lenis({
@@ -69,11 +82,85 @@ export default function ProductDetail() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [id]);
+  }, [slug]);
 
   const toggleAccordion = (section: string) => {
     setActiveAccordion(prev => prev === section ? null : section);
   };
+
+  // Derived data from product
+  const images = product?.images?.length ? product.images.map(img => img.url) : [fallbackImage];
+  const price = product ? Number(product.salePrice || product.basePrice) : 0;
+  const originalPrice = product ? Number(product.basePrice) : 0;
+  const hasSale = product?.salePrice && Number(product.salePrice) < originalPrice;
+
+  // Get unique sizes and colors from variants
+  const availableSizes = product?.variants
+    ? [...new Set(product.variants.filter(v => !selectedColor || v.color === selectedColor).map(v => v.size))]
+    : [];
+  const availableColors = product?.variants
+    ? [...new Set(product.variants.map(v => v.color))]
+    : [];
+
+  // Find the selected variant
+  const selectedVariant = product?.variants?.find(
+    v => v.size === selectedSize && v.color === selectedColor
+  );
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    if (!selectedSize) {
+      setSizeError(true);
+      return;
+    }
+    if (!selectedVariant) {
+      setSizeError(true);
+      return;
+    }
+
+    setSizeError(false);
+    setAddedToCart(true);
+
+    await addItem({
+      productId: product.id,
+      variantId: selectedVariant.id,
+      name: product.name,
+      variant: `${selectedColor} / ${selectedSize}`,
+      price: Number(selectedVariant.priceOverride || product.salePrice || product.basePrice),
+      image: product.images?.[0]?.url || fallbackImage,
+      slug: product.slug,
+    }, qty);
+
+    setTimeout(() => setAddedToCart(false), 2000);
+  };
+
+  // Reviews from API response
+  const reviews = (product as any)?.reviews || [];
+  const reviewCount = product?._count?.reviews || reviews.length;
+
+  if (loading) {
+    return (
+      <div style={{ backgroundColor: "#080808", color: "#fff", minHeight: "100vh", fontFamily: "'Jost', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "20px" }}>
+        <Navbar />
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
+          <Loader2 size={28} color="rgba(139, 43, 226, 0.6)" />
+        </motion.div>
+        <span style={{ fontSize: "11px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>Loading product...</span>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div style={{ backgroundColor: "#080808", color: "#fff", minHeight: "100vh", fontFamily: "'Jost', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "20px" }}>
+        <Navbar />
+        <p style={{ fontSize: "14px", letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)" }}>{error || "Product not found"}</p>
+        <button onClick={() => navigate(-1)} style={{ background: "rgba(139, 43, 226, 0.1)", border: "1px solid rgba(139, 43, 226, 0.4)", borderRadius: "100px", padding: "12px 32px", color: "#fff", cursor: "pointer", letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase" }}>
+          GO BACK
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ backgroundColor: "#080808", color: "#fff", minHeight: "100vh", fontFamily: "'Jost', sans-serif" }} ref={containerRef}>
@@ -93,14 +180,14 @@ export default function ProductDetail() {
 
         <div style={{ display: "flex", gap: "clamp(40px, 8vw, 100px)", alignItems: "flex-start", flexWrap: "wrap", position: "relative" }}>
 
-          {/* Animated Scroll Progress Bar (Left Sidebar) */}
+          {/* Scroll Progress Bar */}
           <div style={{ position: "sticky", top: "140px", height: "60vh", width: "2px", background: "rgba(255,255,255,0.05)", display: "flex", flexDirection: "column" }} className="scroll-tracker">
             <motion.div style={{ width: "100%", background: "#fff", height: indicatorHeight }} />
           </div>
 
-          {/* Left Column: Image Gallery (Scrollable) */}
+          {/* Left Column: Image Gallery */}
           <div ref={galleryRef} className="pdp-gallery" style={{ flex: "1.5", minWidth: "400px", display: "flex", flexDirection: "column", gap: "20px" }}>
-            {GALLERY.map((img, idx) => (
+            {images.map((img, idx) => (
               <motion.div
                 key={idx}
                 initial={{ opacity: 0, scale: 0.98 }}
@@ -109,10 +196,14 @@ export default function ProductDetail() {
                 transition={{ duration: 0.8, ease: "easeOut" }}
                 style={{ width: "100%", background: "#111", overflow: "hidden", position: "relative" }}
               >
-                <img src={img} style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }} alt={`Product Angle ${idx + 1}`} />
-                {/* Index tag */}
+                <img
+                  src={img}
+                  style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
+                  alt={`${product.name} - angle ${idx + 1}`}
+                  onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage; }}
+                />
                 <div style={{ position: "absolute", bottom: "20px", left: "20px", fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontFamily: "'Jost', sans-serif" }}>
-                  0{idx + 1} / 0{GALLERY.length}
+                  0{idx + 1} / 0{images.length}
                 </div>
               </motion.div>
             ))}
@@ -124,102 +215,150 @@ export default function ProductDetail() {
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.2 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
                 <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "clamp(2.5rem, 4vw, 3.5rem)", fontWeight: 300, lineHeight: 1.1, margin: 0, color: "#fff" }}>
-                  Obsidian Trench {id && `#${id}`}
+                  {product.name}
                 </h1>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "30px" }}>
-                <p style={{ fontSize: "20px", color: "rgba(255,255,255,0.9)", margin: 0, letterSpacing: "0.05em", fontFamily: "'Jost', sans-serif" }}>$1,850.00</p>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  {hasSale && (
+                    <span style={{ fontSize: "16px", color: "rgba(255,255,255,0.3)", textDecoration: "line-through", letterSpacing: "0.05em" }}>
+                      ₹{originalPrice.toLocaleString()}
+                    </span>
+                  )}
+                  <p style={{ fontSize: "20px", color: "rgba(255,255,255,0.9)", margin: 0, letterSpacing: "0.05em", fontFamily: "'Jost', sans-serif" }}>
+                    ₹{price.toLocaleString()}
+                  </p>
+                </div>
                 <div style={{ display: "flex", gap: "2px" }}>
                   {[...Array(5)].map((_, i) => <Star key={i} size={12} fill="#fff" color="#fff" />)}
-                  <span style={{ fontSize: "11px", marginLeft: "6px", color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em" }}>(2 Reviews)</span>
+                  <span style={{ fontSize: "11px", marginLeft: "6px", color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em" }}>({reviewCount} Reviews)</span>
                 </div>
               </div>
 
               <div style={{ paddingBottom: "30px", borderBottom: "1px solid rgba(255,255,255,0.1)", marginBottom: "40px" }}>
                 <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.5)", lineHeight: 1.6, fontWeight: 300, letterSpacing: "0.02em" }}>
-                  A masterful execution of architectural brutalism applied to outerwear. The Obsidian Trench is cut from treated heavy-weight gabardine with structural shoulders and a rigid, flowing drape. Water-resistant and lined with thermal silk layers.
+                  {product.description}
                 </p>
               </div>
 
-              {/* Sizing Selector */}
+              {/* Color Selector */}
+              {availableColors.length > 1 && (
+                <div style={{ marginBottom: "30px" }}>
+                  <span style={{ fontSize: "11px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.6)", marginBottom: "16px", display: "block" }}>
+                    Color: {selectedColor}
+                  </span>
+                  <div style={{ display: "flex", gap: "12px" }}>
+                    {availableColors.map(color => {
+                      const variant = product.variants?.find(v => v.color === color);
+                      return (
+                        <button
+                          key={color}
+                          onClick={() => { setSelectedColor(color); setSelectedSize(null); }}
+                          style={{
+                            width: "36px", height: "36px", borderRadius: "50%",
+                            background: variant?.colorHex || "#666",
+                            border: selectedColor === color ? "2px solid #fff" : "2px solid rgba(255,255,255,0.15)",
+                            cursor: "pointer", transition: "border-color 0.3s",
+                            outline: selectedColor === color ? "2px solid rgba(255,255,255,0.3)" : "none",
+                            outlineOffset: "3px",
+                          }}
+                          title={color}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Size Selector */}
               <div style={{ marginBottom: "40px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
                   <span style={{ fontSize: "11px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.6)" }}>Select Size</span>
                   <button onClick={() => navigate('/size-guide')} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "11px", letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)", textDecoration: "underline", transition: "color 0.3s" }} onMouseEnter={(e) => e.currentTarget.style.color = "#fff"} onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}>Size Guide</button>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" }}>
-                  {SIZES.map(size => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      style={{
-                        background: "transparent",
-                        color: selectedSize === size ? "#fff" : "rgba(255,255,255,0.6)",
-                        border: selectedSize === size ? "1px solid #fff" : "1px solid rgba(255,255,255,0.15)",
-                        padding: "16px 0", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "0.1em",
-                        transition: "all 0.3s ease",
-                        position: "relative", overflow: "hidden"
-                      }}
-                      className="size-btn"
-                    >
-                      {/* Animated Active Background */}
-                      <AnimatePresence>
-                        {selectedSize === size && (
-                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ duration: 0.3 }}
-                            style={{ position: "absolute", inset: 0, background: "#fff", zIndex: -1 }} />
-                        )}
-                      </AnimatePresence>
-                      <span style={{ position: "relative", zIndex: 2, color: selectedSize === size ? "#000" : "inherit" }}>{size}</span>
-                    </button>
-                  ))}
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(availableSizes.length, 4)}, 1fr)`, gap: "12px" }}>
+                  {availableSizes.map(size => {
+                    const variant = product.variants?.find(v => v.size === size && v.color === selectedColor);
+                    const outOfStock = variant ? variant.stock <= 0 : true;
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => { if (!outOfStock) { setSelectedSize(size); setSizeError(false); } }}
+                        disabled={outOfStock}
+                        style={{
+                          background: "transparent",
+                          color: outOfStock ? "rgba(255,255,255,0.2)" : selectedSize === size ? "#fff" : "rgba(255,255,255,0.6)",
+                          border: selectedSize === size ? "1px solid #fff" : "1px solid rgba(255,255,255,0.15)",
+                          padding: "16px 0", cursor: outOfStock ? "not-allowed" : "pointer",
+                          fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "0.1em",
+                          transition: "all 0.3s ease", position: "relative", overflow: "hidden",
+                          textDecoration: outOfStock ? "line-through" : "none",
+                          opacity: outOfStock ? 0.4 : 1,
+                        }}
+                        className="size-btn"
+                      >
+                        <AnimatePresence>
+                          {selectedSize === size && !outOfStock && (
+                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ duration: 0.3 }}
+                              style={{ position: "absolute", inset: 0, background: "#fff", zIndex: -1 }} />
+                          )}
+                        </AnimatePresence>
+                        <span style={{ position: "relative", zIndex: 2, color: selectedSize === size && !outOfStock ? "#000" : "inherit" }}>{size}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-                {!selectedSize && <p style={{ fontSize: "11px", color: "#ff4d4d", marginTop: "12px", display: "none" }} id="size-error">Please select a size.</p>}
+                {sizeError && <p style={{ fontSize: "11px", color: "#ff4d4d", marginTop: "12px" }}>Please select a size.</p>}
+                {selectedVariant && selectedVariant.stock <= 5 && selectedVariant.stock > 0 && (
+                  <p style={{ fontSize: "11px", color: "#ffebab", marginTop: "8px", letterSpacing: "0.1em" }}>Only {selectedVariant.stock} left in stock</p>
+                )}
               </div>
 
-              {/* Enhanced Add to Cart Controller */}
+              {/* Add to Cart Controller */}
               <div style={{ display: "flex", gap: "16px", marginBottom: "50px", height: "60px" }}>
-                {/* Modern Quantity Selector */}
+                {/* Quantity Selector */}
                 <div className="qty-selector" style={{ display: "flex", alignItems: "center", border: "1px solid rgba(255,255,255,0.2)", width: "130px", justifyContent: "space-between", padding: "0", transition: "border-color 0.3s", height: "100%" }}>
                   <button onClick={() => setQty(Math.max(1, qty - 1))} className="qty-btn" style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", height: "100%", padding: "0 16px", opacity: qty <= 1 ? 0.3 : 1, transition: "background 0.3s" }}><Minus size={14} /></button>
                   <span style={{ fontSize: "14px", color: "#fff", fontFamily: "'Jost', sans-serif" }}>{qty}</span>
                   <button onClick={() => setQty(qty + 1)} className="qty-btn" style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", height: "100%", padding: "0 16px", transition: "background 0.3s" }}><Plus size={14} /></button>
                 </div>
 
-                {/* Expanding Buy Button */}
+                {/* Add to Cart Button */}
                 <button
-                  onClick={() => {
-                    if (!selectedSize) {
-                      const errorEl = document.getElementById('size-error');
-                      if (errorEl) errorEl.style.display = 'block';
-                      return;
-                    }
-                    alert("Order Initiated!");
-                  }}
+                  onClick={handleAddToCart}
+                  disabled={addedToCart}
                   style={{
-                    flex: 1, background: "#fff", color: "#000", border: "none", height: "100%",
+                    flex: 1, background: addedToCart ? "#22c55e" : "#fff", color: addedToCart ? "#fff" : "#000", border: "none", height: "100%",
                     fontFamily: "'Jost', sans-serif", fontSize: "13px", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase",
-                    cursor: "pointer", transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px"
+                    cursor: addedToCart ? "default" : "pointer", transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px"
                   }}
                   className="elegant-buy-btn"
                 >
-                  <span style={{ zIndex: 2, position: "relative" }}>ADD TO CART</span>
-                  <ArrowRight size={16} className="buy-arrow" style={{ zIndex: 2, position: "relative", transition: "transform 0.4s" }} />
-                  {/* Subtle hover pulse */}
-                  <div className="buy-hover-bg" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.1)", transform: "scaleY(0)", transformOrigin: "bottom", transition: "transform 0.4s", zIndex: 1 }} />
+                  {addedToCart ? (
+                    <>
+                      <Check size={16} style={{ zIndex: 2, position: "relative" }} />
+                      <span style={{ zIndex: 2, position: "relative" }}>ADDED</span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ zIndex: 2, position: "relative" }}>ADD TO CART</span>
+                      <ArrowRight size={16} className="buy-arrow" style={{ zIndex: 2, position: "relative", transition: "transform 0.4s" }} />
+                    </>
+                  )}
                 </button>
 
-                {/* Wishlist / Vault Button */}
+                {/* Wishlist Button */}
                 <button
                   onClick={() => {
                     if (isSaved) {
-                      removeItem(numericId);
+                      removeWishlistItem(numericId);
                     } else {
-                      addItem({
+                      addWishlistItem({
                         id: numericId,
-                        name: `Obsidian Trench #${numericId}`,
-                        variant: selectedSize ? `Black / ${selectedSize}` : 'Black / Base',
-                        price: 1850,
-                        image: imageMain
+                        name: product.name,
+                        variant: selectedSize ? `${selectedColor || ''} / ${selectedSize}` : selectedColor || 'Default',
+                        price: price,
+                        image: product.images?.[0]?.url || fallbackImage
                       });
                     }
                   }}
@@ -228,29 +367,28 @@ export default function ProductDetail() {
                     display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.3s",
                     color: isSaved ? "#8B2BE2" : "#fff", borderColor: isSaved ? "#8B2BE2" : "rgba(255,255,255,0.2)"
                   }}
-                  onMouseEnter={(e) => {
-                    if (!isSaved) {
-                      e.currentTarget.style.borderColor = "#fff";
-                      e.currentTarget.style.color = "#8B2BE2";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSaved) {
-                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
-                      e.currentTarget.style.color = "#fff";
-                    }
-                  }}
+                  onMouseEnter={(e) => { if (!isSaved) { e.currentTarget.style.borderColor = "#fff"; e.currentTarget.style.color = "#8B2BE2"; } }}
+                  onMouseLeave={(e) => { if (!isSaved) { e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; e.currentTarget.style.color = "#fff"; } }}
                   title="Save to Vault"
                 >
                   <Star fill={isSaved ? "#8B2BE2" : "none"} size={20} />
                 </button>
               </div>
 
+              {/* Tag */}
+              {product.tag && (
+                <div style={{ marginBottom: "30px" }}>
+                  <span style={{ background: "rgba(139, 43, 226, 0.1)", border: "1px solid rgba(139, 43, 226, 0.3)", borderRadius: "100px", padding: "6px 16px", fontSize: "9px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>
+                    {product.tag.replace('_', ' ')}
+                  </span>
+                </div>
+              )}
+
               {/* Accordions */}
               <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
                 {[
-                  { id: "details", title: "Details & Care", content: "Dry clean only. Outer: 100% Cotton Gabardine. Lining: 100% Silk. Made in Italy." },
-                  { id: "shipping", title: "Shipping & Returns", content: "Free worldwide express shipping on orders over $2500. Complimentary returns within 14 days of receipt." }
+                  { id: "details", title: "Details & Care", content: product.shortDesc || "Premium quality materials. Dry clean recommended." },
+                  { id: "shipping", title: "Shipping & Returns", content: "Free worldwide express shipping on orders over ₹5,000. Complimentary returns within 14 days of receipt." }
                 ].map((acc) => (
                   <div key={acc.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
                     <button
@@ -264,10 +402,7 @@ export default function ProductDetail() {
                     </button>
                     <AnimatePresence>
                       {activeAccordion === acc.id && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                          style={{ overflow: "hidden" }}
-                        >
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden" }}>
                           <p style={{ paddingBottom: "24px", margin: 0, color: "rgba(255,255,255,0.5)", fontSize: "13px", lineHeight: 1.6, fontWeight: 300 }}>
                             {acc.content}
                           </p>
@@ -285,18 +420,19 @@ export default function ProductDetail() {
         {/* Separator */}
         <div style={{ width: "100%", height: "1px", background: "rgba(255,255,255,0.05)", margin: "100px 0" }} />
 
-        {/* Bottom Section: Reviews & Client Feedback */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "100px" }}>
+        {/* Reviews Section */}
+        <div style={{ maxWidth: "800px" }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "2rem", fontWeight: 300, marginBottom: "40px" }}>Client Reviews</h2>
 
-          <div style={{ flex: 1, minWidth: "300px" }}>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "2rem", fontWeight: 300, marginBottom: "40px" }}>Client Reviews</h2>
-
+          {reviews.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
-              {MOCK_REVIEWS.map(rev => (
+              {reviews.map((rev: any) => (
                 <div key={rev.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "30px" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                    <p style={{ margin: 0, fontSize: "12px", letterSpacing: "0.1em", textTransform: "uppercase" }}>{rev.author}</p>
-                    <p style={{ margin: 0, fontSize: "10px", color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em" }}>{rev.date}</p>
+                    <p style={{ margin: 0, fontSize: "12px", letterSpacing: "0.1em", textTransform: "uppercase" }}>{rev.user?.name || "Anonymous"}</p>
+                    <p style={{ margin: 0, fontSize: "10px", color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em" }}>
+                      {new Date(rev.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
                   </div>
                   <div style={{ display: "flex", gap: "4px", marginBottom: "16px" }}>
                     {[...Array(5)].map((_, i) => <Star key={i} size={10} fill={i < rev.rating ? "#fff" : "transparent"} color={i < rev.rating ? "#fff" : "rgba(255,255,255,0.2)"} />)}
@@ -307,53 +443,27 @@ export default function ProductDetail() {
                 </div>
               ))}
             </div>
+          ) : (
+            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "13px" }}>No reviews yet. Be the first to review this product.</p>
+          )}
 
-            {/* Custom Review Submission Box */}
-            <div style={{ marginTop: "50px", background: "rgba(255,255,255,0.02)", padding: "30px", border: "1px solid rgba(255,255,255,0.05)" }}>
-              <h3 style={{ fontSize: "12px", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "20px" }}>Write a Review</h3>
-              <textarea
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                placeholder="Share your thoughts on the fit, material, and construction..."
-                style={{ width: "100%", minHeight: "100px", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "16px", fontFamily: "'Jost', sans-serif", fontSize: "13px", resize: "vertical", outline: "none", marginBottom: "20px" }}
-                className="review-input"
-              />
-              <button
-                onClick={() => { if (reviewText) { alert("Review submitted for moderation."); setReviewText(""); } }}
-                style={{ background: "#fff", color: "#000", border: "none", padding: "12px 24px", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "10px", fontWeight: 500, letterSpacing: "0.2em", textTransform: "uppercase", transition: "transform 0.2s" }}
-                className="submit-review-btn"
-              >
-                Submit Feedback
-              </button>
-            </div>
-          </div>
-
-          {/* Cross Sell / Up Sell */}
-          <div style={{ flex: "1.5", minWidth: "400px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "40px" }}>
-              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "2rem", fontWeight: 300, margin: 0 }}>You May Also Like</h2>
-              <a href="#" style={{ fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", textDecoration: "none" }}>View All</a>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "30px" }}>
-              {CROSS_SELL.map((prod) => (
-                <div
-                  key={prod.id}
-                  onClick={() => navigate(`/product/${prod.id}`)}
-                  style={{ cursor: "pointer" }}
-                  className="cross-sell-wrapper"
-                >
-                  <div style={{ width: "100%", aspectRatio: "3/4", overflow: "hidden", position: "relative", marginBottom: "16px" }}>
-                    <img src={prod.image} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.8s ease, filter 0.4s ease" }} className="cross-sell-image" />
-                    <div style={{ position: "absolute", top: "10px", left: "10px", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", padding: "4px 8px", fontSize: "9px", letterSpacing: "0.15em", color: "#fff" }}>
-                      {prod.category}
-                    </div>
-                  </div>
-                  <h3 style={{ fontSize: "12px", fontWeight: 400, letterSpacing: "0.1em", margin: "0 0 8px 0", textTransform: "uppercase" }}>{prod.name}</h3>
-                  <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.6)", fontWeight: 300 }}>${prod.price.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
+          {/* Review Submission */}
+          <div style={{ marginTop: "50px", background: "rgba(255,255,255,0.02)", padding: "30px", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <h3 style={{ fontSize: "12px", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "20px" }}>Write a Review</h3>
+            <textarea
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
+              placeholder="Share your thoughts on the fit, material, and construction..."
+              style={{ width: "100%", minHeight: "100px", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "16px", fontFamily: "'Jost', sans-serif", fontSize: "13px", resize: "vertical", outline: "none", marginBottom: "20px" }}
+              className="review-input"
+            />
+            <button
+              onClick={() => { if (reviewText) { alert("Review submitted for moderation."); setReviewText(""); } }}
+              style={{ background: "#fff", color: "#000", border: "none", padding: "12px 24px", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "10px", fontWeight: 500, letterSpacing: "0.2em", textTransform: "uppercase", transition: "transform 0.2s" }}
+              className="submit-review-btn"
+            >
+              Submit Feedback
+            </button>
           </div>
         </div>
       </main>
@@ -361,44 +471,26 @@ export default function ProductDetail() {
       <Footer />
 
       <style>{`
-        .size-btn:hover {
+        .size-btn:hover:not(:disabled) {
           border-color: #fff !important;
         }
-        
         .qty-selector:hover { border-color: rgba(255,255,255,0.5) !important; }
         .qty-btn:hover { background: rgba(255,255,255,0.1) !important; }
-
-        .elegant-buy-btn:hover {
+        .elegant-buy-btn:hover:not(:disabled) {
           background: #e6e6e6;
         }
         .elegant-buy-btn:hover .buy-arrow {
           transform: translateX(4px);
         }
-        .elegant-buy-btn:hover .buy-hover-bg {
-          transform: scaleY(1);
-        }
-
         .review-input:focus {
           border-color: rgba(255,255,255,0.4) !important;
         }
         .submit-review-btn:hover {
           transform: scale(0.98);
         }
-
-        .cross-sell-wrapper:hover .cross-sell-image {
-          transform: scale(1.05);
-          filter: brightness(0.85);
-        }
-        
         @media (max-width: 1024px) {
-          .pdp-gallery {
-            flex: initial !important;
-            width: 100%;
-          }
-          .pdp-info {
-            position: relative !important;
-            top: 0 !important;
-          }
+          .pdp-gallery { flex: initial !important; width: 100%; }
+          .pdp-info { position: relative !important; top: 0 !important; }
           .scroll-tracker { display: none !important; }
         }
       `}</style>

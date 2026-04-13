@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, useCallback, useId, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ShoppingBag, Search, X, Star } from 'lucide-react';
+import { ShoppingBag, Search, X, Star, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
 import CartSidebar from './CartSidebar';
 import WishlistSidebar from './WishlistSidebar';
 import { useCart } from '../context/CartContext';
+import { searchApi } from '../api/search';
 
 // ─── Set your logo path here ──────────────────────────────────────────────────
 import logo from '../assets/Secondary_logo.svg';
@@ -602,6 +603,9 @@ export default function Navbar() {
   const [hidden, setHidden] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Array<{ name: string; slug: string }>>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const { itemCount: cartCount } = useCart();
   const [wishlistOpen, setWishlistOpen] = useState(false);
@@ -628,6 +632,34 @@ export default function Navbar() {
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
   }, [searchOpen]);
+
+  // Debounced search API call
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+
+    if (!searchQuery || searchQuery.length < 2) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const results = await searchApi.suggestions(searchQuery);
+        setSearchResults(results);
+      } catch (err) {
+        console.warn('Search failed:', err);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [searchQuery]);
 
   return (
     <>
@@ -889,24 +921,32 @@ export default function Navbar() {
                   transition={{ duration: 1, delay: 0.4 }}
                 >
                   <p className="nb-fs-search-title">
-                    {searchQuery ? `RESULTS FOR "${searchQuery.toUpperCase()}"` : "Popular"}
+                    {searchLoading ? "SEARCHING..." : searchQuery && searchQuery.length >= 2 ? `RESULTS FOR "${searchQuery.toUpperCase()}"` : "Popular"}
                   </p>
                   <div className="nb-fs-search-tags">
-                    {searchQuery ? (
-                      ['Tailored Outerwear', 'Silk Dress Noir', 'Obelisk Boots'].map((tag, i) => (
-                        <motion.span
-                          key={'res' + tag}
-                          initial={{ y: 20, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: i * 0.1, duration: 0.6 }}
-                          className="nb-fs-tag"
-                          onClick={() => { setSearchOpen(false); navigate('/product/4'); }}
-                        >
-                          {tag}
-                        </motion.span>
-                      ))
+                    {searchLoading ? (
+                      <Loader2 size={20} color="rgba(255,235,171,0.6)" style={{ animation: 'spin 1s linear infinite' }} />
+                    ) : searchQuery && searchQuery.length >= 2 ? (
+                      searchResults.length > 0 ? (
+                        searchResults.map((result, i) => (
+                          <motion.span
+                            key={result.slug}
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: i * 0.08, duration: 0.5 }}
+                            className="nb-fs-tag"
+                            onClick={() => { setSearchOpen(false); setSearchQuery(""); navigate(`/product/${result.slug}`); }}
+                          >
+                            {result.name}
+                          </motion.span>
+                        ))
+                      ) : (
+                        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', fontFamily: "'Jost', sans-serif" }}>
+                          No results found for "{searchQuery}"
+                        </span>
+                      )
                     ) : (
-                      ['Outerwear', 'Silk Dresses', 'Heavy Knits', 'Accessories'].map((tag, i) => (
+                      ['Oversized Tee', 'Cargo Pants', 'Silk Dress', 'Blazer'].map((tag, i) => (
                         <motion.span
                           key={tag}
                           initial={{ y: 20, opacity: 0 }}
@@ -958,6 +998,7 @@ export default function Navbar() {
                  transition: all 0.3s ease; cursor: pointer; background: rgba(255,255,255,0.02);
                }
                .nb-fs-tag:hover { background: #fff; color: #080808; border-color: #fff; }
+               @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                
                @media (max-width: 768px) {
                  .nb-fs-search-input-wrap { padding-bottom: 12px; }
