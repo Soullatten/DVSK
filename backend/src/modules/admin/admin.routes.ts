@@ -8,10 +8,14 @@ const router = Router();
 
 router.use(authenticate, requireAdmin);
 
-// Dashboard
+// Dashboard & Engine
 router.get("/dashboard", adminController.dashboard);
 router.get("/revenue", adminController.revenue);
 router.get("/inventory", adminController.inventory);
+router.get("/storefront-status", adminController.storefrontStatus);
+router.get("/drafts", adminController.drafts);
+router.get("/segments", adminController.segments);
+router.get("/reports", adminController.reports);
 
 // Users
 router.get("/users", adminController.listUsers);

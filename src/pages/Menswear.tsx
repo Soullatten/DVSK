@@ -6,12 +6,21 @@ import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { SlidersHorizontal, Loader2 } from 'lucide-react';
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import TypeFilterBar, { matchesType, type TypeFilterEntry } from "../components/TypeFilterBar";
 import { productsApi } from "../api/products";
 import type { Product } from "../api/types";
 
-// Fallback image for when Unsplash URLs might be slow
-import fallbackImage from '../assets/image01.png';
-import heroImage from '../assets/image01.png';
+const APPAREL_FILTERS: TypeFilterEntry[] = [
+  { key: "ALL", label: "All", keywords: [] },
+  { key: "TSHIRT", label: "T-Shirt", keywords: ["t-shirt", "tshirt", "tee", "shirt", "polo"] },
+  { key: "PANTS", label: "Pants", keywords: ["pant", "jeans", "trouser", "cargo", "baggy", "joggers"] },
+  { key: "JERSEY", label: "Jersey", keywords: ["jersey"] },
+  { key: "HOODIE", label: "Hoodie", keywords: ["hoodie", "hoody", "sweatshirt", "sweater"] },
+  { key: "JACKET", label: "Jacket", keywords: ["jacket", "coat", "blazer", "vest", "puffer"] },
+  { key: "SHORTS", label: "Shorts", keywords: ["short"] },
+];
+
+import heroImage from '../assets/image8.jpg';
 
 const SORT_OPTIONS = [
   { label: "Featured", value: "featured" },
@@ -32,6 +41,8 @@ export default function Menswear() {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [maxPrice, setMaxPrice] = useState(10000);
   const [sortBy, setSortBy] = useState("featured");
+  const [typeFilter, setTypeFilter] = useState<string>("ALL");
+  const activeFilterEntry = APPAREL_FILTERS.find((f) => f.key === typeFilter) || APPAREL_FILTERS[0];
 
   useEffect(() => {
     const lenis = new Lenis({
@@ -69,6 +80,7 @@ export default function Menswear() {
   const filteredProducts = products.filter(p => {
     if (activeCategory !== "ALL" && p.category.name.toUpperCase() !== activeCategory) return false;
     if (Number(p.salePrice || p.basePrice) > maxPrice) return false;
+    if (!matchesType(p.name, activeFilterEntry)) return false;
     return true;
   }).sort((a, b) => {
     const priceA = Number(a.salePrice || a.basePrice);
@@ -197,9 +209,16 @@ export default function Menswear() {
 
           {/* Right Main Content */}
           <div style={{ flex: 1, minWidth: "320px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px", borderBottom: "0.5px solid rgba(255,255,255,0.08)", paddingBottom: "20px" }}>
-              <span style={{ fontSize: "11px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.4)" }}>SHOWING {filteredProducts.length} {filteredProducts.length === 1 ? 'RESULT' : 'RESULTS'}</span>
-            </div>
+            <TypeFilterBar
+              products={products.filter(p => activeCategory === "ALL" || p.category.name.toUpperCase() === activeCategory)}
+              filters={APPAREL_FILTERS}
+              active={typeFilter}
+              onChange={setTypeFilter}
+              resultCount={filteredProducts.length}
+              sortValue={sortBy}
+              sortOptions={SORT_OPTIONS}
+              onSortChange={setSortBy}
+            />
 
             <motion.div layout style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "50px 30px" }}>
               {loading ? (
@@ -228,8 +247,20 @@ export default function Menswear() {
                     style={{ cursor: "pointer", textAlign: "left" }}
                     className="product-wrapper"
                   >
-                    <div style={{ width: "100%", aspectRatio: "3/4", overflow: "hidden", position: "relative", marginBottom: "16px", background: "rgba(255,255,255,0.02)" }}>
-                      <img src={prod.images?.[0]?.url || fallbackImage} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 1s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease" }} className="product-image" onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage; }} />
+                    <div style={{ width: "100%", aspectRatio: "3/4", overflow: "hidden", position: "relative", marginBottom: "16px", background: "linear-gradient(135deg, #0a0a0a 0%, #161616 50%, #0a0a0a 100%)" }}>
+                      {/* Always render the placeholder underneath; image overlays it. If image fails to load, we hide the img and the placeholder shows. */}
+                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "8px" }}>
+                        <div style={{ fontSize: "10px", letterSpacing: "0.3em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase" }}>No Image</div>
+                        <div style={{ fontSize: "9px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.15)" }}>DVSK</div>
+                      </div>
+                      {prod.images?.[0]?.url && (
+                        <img
+                          src={prod.images[0].url}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", position: "relative", zIndex: 1, transition: "transform 1s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease" }}
+                          className="product-image"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      )}
 
                       {/* Interactive View Overlay */}
                       <div style={{ position: "absolute", inset: 0, background: "rgba(8,8,8,0.4)", opacity: 0, transition: "opacity 0.4s", display: "flex", alignItems: "center", justifyContent: "center" }} className="product-overlay">

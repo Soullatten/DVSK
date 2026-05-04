@@ -11,7 +11,6 @@ import { useWishlist } from "../context/WishlistContext";
 import { productsApi } from "../api/products";
 import type { Product } from "../api/types";
 
-import fallbackImage from '../assets/image6.png';
 
 export default function ProductDetail() {
   const { id: slug } = useParams();
@@ -89,7 +88,7 @@ export default function ProductDetail() {
   };
 
   // Derived data from product
-  const images = product?.images?.length ? product.images.map(img => img.url) : [fallbackImage];
+  const images = product?.images?.length ? product.images.map(img => img.url) : [];
   const price = product ? Number(product.salePrice || product.basePrice) : 0;
   const originalPrice = product ? Number(product.basePrice) : 0;
   const hasSale = product?.salePrice && Number(product.salePrice) < originalPrice;
@@ -127,7 +126,7 @@ export default function ProductDetail() {
       name: product.name,
       variant: `${selectedColor} / ${selectedSize}`,
       price: Number(selectedVariant.priceOverride || product.salePrice || product.basePrice),
-      image: product.images?.[0]?.url || fallbackImage,
+      image: product.images?.[0]?.url || "",
       slug: product.slug,
     }, qty);
 
@@ -187,26 +186,32 @@ export default function ProductDetail() {
 
           {/* Left Column: Image Gallery */}
           <div ref={galleryRef} className="pdp-gallery" style={{ flex: "1.5", minWidth: "400px", display: "flex", flexDirection: "column", gap: "20px" }}>
-            {images.map((img, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, scale: 0.98 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                style={{ width: "100%", background: "#111", overflow: "hidden", position: "relative" }}
-              >
-                <img
-                  src={img}
-                  style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
-                  alt={`${product.name} - angle ${idx + 1}`}
-                  onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage; }}
-                />
-                <div style={{ position: "absolute", bottom: "20px", left: "20px", fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontFamily: "'Jost', sans-serif" }}>
-                  0{idx + 1} / 0{images.length}
-                </div>
-              </motion.div>
-            ))}
+            {images.length === 0 ? (
+              <div style={{ width: "100%", aspectRatio: "3/4", background: "linear-gradient(135deg, #0a0a0a 0%, #161616 50%, #0a0a0a 100%)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "12px", border: "1px solid rgba(255,255,255,0.04)" }}>
+                <div style={{ fontSize: "11px", letterSpacing: "0.4em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" }}>No Image Uploaded</div>
+                <div style={{ fontSize: "10px", letterSpacing: "0.3em", color: "rgba(255,255,255,0.15)", fontFamily: "'Jost', sans-serif" }}>DVSK</div>
+              </div>
+            ) : (
+              images.map((img, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  style={{ width: "100%", background: "#111", overflow: "hidden", position: "relative" }}
+                >
+                  <img
+                    src={img}
+                    style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
+                    alt={`${product.name} - angle ${idx + 1}`}
+                  />
+                  <div style={{ position: "absolute", bottom: "20px", left: "20px", fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.5)", fontFamily: "'Jost', sans-serif" }}>
+                    0{idx + 1} / 0{images.length}
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
 
           {/* Right Column: Sticky Product Info */}

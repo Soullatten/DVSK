@@ -21,7 +21,9 @@ const router = Router();
 router.use(authenticate, requireAdmin);
 
 router.post("/image", upload.single("image"), uploadController.uploadImage);
+router.post("/product-image", upload.single("image"), uploadController.uploadImage);
 router.post("/images", upload.array("images", 10), uploadController.uploadImages);
+router.post("/product-images", upload.array("images", 10), uploadController.uploadImages);
 router.delete("/:publicId", uploadController.deleteImage);
 
 export default router;

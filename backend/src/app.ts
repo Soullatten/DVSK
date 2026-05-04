@@ -21,17 +21,50 @@ import reviewRoutes from "./modules/reviews/review.routes.js";
 import searchRoutes from "./modules/search/search.routes.js";
 import uploadRoutes from "./modules/upload/upload.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
+import chatRoutes from "./modules/chat/chat.routes.js";
+import panelRoutes from "./modules/panel/panel.routes.js";
+import purchaseOrderRoutes from "./modules/purchase-orders/po.routes.js";
+import marketingRoutes from "./modules/marketing/marketing.routes.js";
+import devRoutes from "./modules/dev/dev.routes.js";
 
 const app = express();
 
 // Middleware
-app.use(helmet());
-app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
+// helmet() defaults are too strict for a dev backend that:
+//   1. Serves static images from /uploads consumed by another origin (storefront on 5173, admin on 5172)
+//   2. Has frontends that include libraries needing eval() (Three.js shaders, Framer Motion, etc.)
+// We loosen two specific headers so images load cross-origin and CSP doesn't block eval-based libs.
+// CORS itself is still allow-listed via env.ALLOWED_ORIGINS below.
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // disable strict CSP — frontends manage their own
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // allow other origins to <img src> our /uploads
+    crossOriginEmbedderPolicy: false,
+  })
+);
+app.use(
+  cors({
+    origin(origin, callback) {
+      // allow tools like Postman / curl (no origin header)
+      if (!origin) return callback(null, true);
+
+      if (env.ALLOWED_ORIGINS.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 app.use(compression());
 app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Serve locally-uploaded product images (used when Cloudinary isn't configured)
+app.use("/uploads", express.static("uploads"));
 
 // Rate limiting
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 100, message: { success: false, error: { code: "RATE_LIMIT", message: "Too many requests" } } });
@@ -57,7 +90,13 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/admin/chat", chatRoutes);
+app.use("/api/admin/purchase-orders", purchaseOrderRoutes);
+app.use("/api/dev", devRoutes);
+app.use("/api/admin", marketingRoutes);
 app.use("/api/admin", adminRoutes);
+// Admin panel feeds at root /api so existing pages calling /customers, /discounts, etc. work.
+app.use("/api", panelRoutes);
 
 // Error handler
 app.use(errorHandler);

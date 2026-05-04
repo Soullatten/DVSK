@@ -1,6 +1,20 @@
 import type { Request, Response } from "express";
 import * as adminService from "./admin.service.js";
 import { success, created, badRequest } from "../../utils/apiResponse.js";
+import { env } from "../../env.js";
+
+export async function storefrontStatus(_req: Request, res: Response) {
+  const url = env.FRONTEND_URL;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const r = await fetch(url, { method: "HEAD", signal: controller.signal });
+    clearTimeout(timeout);
+    return success(res, { online: r.ok, statusCode: r.status, url });
+  } catch {
+    return success(res, { online: false, statusCode: null, url });
+  }
+}
 
 export async function dashboard(_req: Request, res: Response) {
   const stats = await adminService.getDashboardStats();
@@ -32,6 +46,21 @@ export async function revenue(req: Request, res: Response) {
   return success(res, data);
 }
 
+export async function drafts(_req: Request, res: Response) {
+  const list = await adminService.getDrafts();
+  return success(res, list);
+}
+
+export async function segments(_req: Request, res: Response) {
+  const list = await adminService.getSegments();
+  return success(res, list);
+}
+
+export async function reports(_req: Request, res: Response) {
+  const list = await adminService.getReports();
+  return success(res, list);
+}
+
 export async function createCoupon(req: Request, res: Response) {
   try {
     const coupon = await adminService.createCoupon(req.body);
@@ -56,3 +85,4 @@ export async function deleteCoupon(req: Request, res: Response) {
   await adminService.deleteCoupon(req.params.id as string);
   return success(res, null, "Coupon deactivated");
 }
+

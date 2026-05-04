@@ -1,7 +1,19 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs -I {} basename {})"
+      "Bash(xargs -I {} basename {})",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npx prisma *)",
+      "Bash(tasklist)",
+      "Bash(findstr /I \"node tsx\")",
+      "Bash(findstr node *)",
+      "Read(//c/Users/krish/dvsk-admin/src/pages/**)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\krish\\Downloads",
+      "c:\\Users\\krish\\dvsk-admin\\src\\api",
+      "c:\\Users\\krish\\dvsk-admin\\src\\pages"
     ]
   }
 }

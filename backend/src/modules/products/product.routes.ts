@@ -2,7 +2,13 @@ import { Router } from "express";
 import * as productController from "./product.controller.js";
 import { authenticate, requireAdmin } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
-import { createProductSchema, updateProductSchema, variantSchema, productQuerySchema } from "./product.schema.js";
+import {
+  createProductSchema,
+  updateProductSchema,
+  variantSchema,
+  productQuerySchema,
+  addImagesSchema,
+} from "./product.schema.js";
 
 const router = Router();
 
@@ -18,5 +24,7 @@ router.put("/:id", authenticate, requireAdmin, validate(updateProductSchema), pr
 router.delete("/:id", authenticate, requireAdmin, productController.deleteProduct);
 router.post("/:id/variants", authenticate, requireAdmin, validate(variantSchema), productController.addVariant);
 router.put("/:id/variants/:variantId", authenticate, requireAdmin, productController.updateVariant);
+router.post("/:id/images", authenticate, requireAdmin, validate(addImagesSchema), productController.addImages);
+router.delete("/:id/images/:imageId", authenticate, requireAdmin, productController.removeImage);
 
 export default router;

@@ -7,6 +7,9 @@ import AppRoutes from './AppRoutes.tsx'
 import CookieConsent from './components/CookieConsent.tsx'
 import { WishlistProvider } from './context/WishlistContext.tsx'
 import { CartProvider } from './context/CartContext.tsx'
+import { initAuthTokenSync } from './lib/authBridge'
+
+initAuthTokenSync();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

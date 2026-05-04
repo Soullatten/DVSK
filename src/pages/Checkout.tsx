@@ -81,8 +81,15 @@ export default function Checkout() {
   };
 
   const handlePayment = async () => {
-    if (!email || !firstName || !lastName || !address || !city || !pincode || !phone) {
+    if (!email || !firstName || !lastName || !address || !city || !state || !pincode || !phone) {
       setError("Please fill in all required fields.");
+      return;
+    }
+
+    const token = localStorage.getItem('dvsk_auth_token');
+    if (!token) {
+      setError("Please log in to place an order.");
+      setTimeout(() => navigate('/login'), 1500);
       return;
     }
 
@@ -90,101 +97,73 @@ export default function Checkout() {
     setProcessing(true);
 
     try {
-      // Step 1: Create order in backend (which creates from cart)
-      // First we need an address ID — for now we pass address data
-      // The backend expects an addressId, so we need to create address first
-      // For simplicity, we'll create a simplified flow
+      const order = await ordersApi.createOrder({
+        shippingAddress: {
+          fullName: `${firstName} ${lastName}`,
+          phone,
+          email,
+          addressLine1: address,
+          city,
+          state,
+          pincode,
+          country: "India",
+        },
+        notes: undefined,
+      });
 
-      const token = localStorage.getItem('dvsk_auth_token');
+      const paymentData = await ordersApi.createPayment(order.id);
 
-      if (token) {
-        // Full backend flow: create order -> create Razorpay order -> open modal -> verify
-        const order = await ordersApi.createOrder(
-          "temp-address", // In production, you'd create/select address first
-          undefined,
-          `${firstName} ${lastName}, ${address}, ${city}, ${state} ${pincode}`
-        );
+      const loaded = await loadRazorpayScript();
+      if (!loaded) throw new Error("Failed to load Razorpay. Check your internet connection.");
 
-        const paymentData = await ordersApi.createPayment(order.id);
-
-        const loaded = await loadRazorpayScript();
-        if (!loaded) throw new Error("Failed to load Razorpay. Check your internet connection.");
-
-        const options = {
-          key: paymentData.key,
-          amount: paymentData.amount,
-          currency: paymentData.currency,
-          name: "DVSK CLO",
-          description: `Order ${order.orderNumber}`,
-          order_id: paymentData.razorpayOrderId,
-          handler: async (response: any) => {
-            try {
-              await ordersApi.verifyPayment({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              });
-              setOrderNumber(order.orderNumber);
-              setOrderComplete(true);
-              await clearCart();
-            } catch (verifyErr: any) {
-              setError("Payment verification failed. Please contact support.");
-            }
-            setProcessing(false);
-          },
-          prefill: {
-            name: `${firstName} ${lastName}`,
-            email: email,
-            contact: phone,
-          },
-          theme: { color: "#080808" },
-          modal: {
-            ondismiss: () => {
-              setProcessing(false);
-            },
-          },
-        };
-
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', (response: any) => {
-          setError(`Payment failed: ${response.error.description}`);
-          setProcessing(false);
-        });
-        rzp.open();
-      } else {
-        // No auth — simulate Razorpay modal (test mode demo)
-        const loaded = await loadRazorpayScript();
-        if (!loaded) throw new Error("Failed to load Razorpay.");
-
-        const options = {
-          key: "rzp_test_placeholder", // Replace with actual test key
-          amount: Math.round(total * 100),
-          currency: "INR",
-          name: "DVSK CLO",
-          description: "DVSK Order",
-          handler: async () => {
-            setOrderNumber(`DVSK-${Date.now()}`);
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: paymentData.amount,
+        currency: paymentData.currency,
+        name: "DVSK CLO",
+        description: `Order ${order.orderNumber}`,
+        order_id: paymentData.razorpayOrderId,
+        handler: async (response: any) => {
+          try {
+            await ordersApi.verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            setOrderNumber(order.orderNumber);
             setOrderComplete(true);
             await clearCart();
+          } catch (verifyErr: any) {
+            setError("Payment verification failed. Please contact support.");
+          }
+          setProcessing(false);
+        },
+        prefill: {
+          name: `${firstName} ${lastName}`,
+          email: email,
+          contact: phone,
+        },
+        theme: { color: "#080808" },
+        modal: {
+          ondismiss: () => {
             setProcessing(false);
           },
-          prefill: {
-            name: `${firstName} ${lastName}`,
-            email: email,
-            contact: phone,
-          },
-          theme: { color: "#080808" },
-          modal: {
-            ondismiss: () => setProcessing(false),
-          },
-        };
+        },
+      };
 
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-      }
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (response: any) => {
+        setError(`Payment failed: ${response.error.description}`);
+        setProcessing(false);
+      });
+      rzp.open();
     } catch (err: any) {
       console.error("Payment error:", err);
-      setError(err.message || "Something went wrong. Please try again.");
+      const apiMsg =
+        err?.response?.data?.error?.message ||
+        err?.response?.data?.message ||
+        err?.message;
+      setError(apiMsg || "Something went wrong. Please try again.");
       setProcessing(false);
     }
   };

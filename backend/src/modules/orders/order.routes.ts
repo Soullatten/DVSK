@@ -16,6 +16,9 @@ router.post("/:id/cancel", orderController.cancelOrder);
 
 // Admin routes
 router.get("/admin/all", requireAdmin, orderController.getAllOrders);
+router.get("/admin/stats", requireAdmin, orderController.getStats);
+router.get("/admin/live-feed", requireAdmin, orderController.getLiveFeed);
+router.get("/admin/:id", requireAdmin, orderController.getAdminOrderDetail);
 router.put("/admin/:id/status", requireAdmin, validate(updateOrderStatusSchema), orderController.updateOrderStatus);
 router.put("/admin/:id/tracking", requireAdmin, validate(updateTrackingSchema), orderController.updateTracking);
 

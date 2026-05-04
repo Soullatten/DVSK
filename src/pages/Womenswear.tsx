@@ -6,11 +6,20 @@ import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { SlidersHorizontal, Loader2 } from 'lucide-react';
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import TypeFilterBar, { matchesType, type TypeFilterEntry } from "../components/TypeFilterBar";
 import { productsApi } from "../api/products";
 import type { Product } from "../api/types";
 
-import fallbackImage from '../assets/image3.png';
-import heroImage from '../assets/image3.png';
+const APPAREL_FILTERS: TypeFilterEntry[] = [
+  { key: "ALL", label: "All", keywords: [] },
+  { key: "TSHIRT", label: "T-Shirt", keywords: ["t-shirt", "tshirt", "tee", "shirt", "polo", "top"] },
+  { key: "PANTS", label: "Pants", keywords: ["pant", "jeans", "trouser", "cargo", "baggy", "joggers", "leggings"] },
+  { key: "DRESS", label: "Dress", keywords: ["dress", "gown", "skirt"] },
+  { key: "JERSEY", label: "Jersey", keywords: ["jersey"] },
+  { key: "HOODIE", label: "Hoodie", keywords: ["hoodie", "hoody", "sweatshirt", "sweater", "crop"] },
+  { key: "JACKET", label: "Jacket", keywords: ["jacket", "coat", "blazer", "vest", "puffer"] },
+];
+
 
 const SORT_OPTIONS = [
   { label: "Featured", value: "featured" },
@@ -31,11 +40,13 @@ export default function Womenswear() {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [maxPrice, setMaxPrice] = useState(10000);
   const [sortBy, setSortBy] = useState("featured");
+  const [typeFilter, setTypeFilter] = useState<string>("ALL");
+  const activeFilterEntry = APPAREL_FILTERS.find((f) => f.key === typeFilter) || APPAREL_FILTERS[0];
 
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.4,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), 
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
     function raf(time: number) {
       lenis.raf(time);
@@ -45,7 +56,6 @@ export default function Womenswear() {
     return () => lenis.destroy();
   }, []);
 
-  // Fetch live products from backend
   useEffect(() => {
     async function fetchProducts() {
       try {
@@ -62,57 +72,56 @@ export default function Womenswear() {
     fetchProducts();
   }, []);
 
-  // Extract unique categories from live data
   const CATEGORIES = ["ALL", ...Array.from(new Set(products.map(p => p.category.name.toUpperCase())))];
 
   const filteredProducts = products.filter(p => {
     if (activeCategory !== "ALL" && p.category.name.toUpperCase() !== activeCategory) return false;
     if (Number(p.salePrice || p.basePrice) > maxPrice) return false;
+    if (!matchesType(p.name, activeFilterEntry)) return false;
     return true;
   }).sort((a, b) => {
     const priceA = Number(a.salePrice || a.basePrice);
     const priceB = Number(b.salePrice || b.basePrice);
     if (sortBy === "price-low") return priceA - priceB;
     if (sortBy === "price-high") return priceB - priceA;
-    return 0; // featured
+    return 0;
   });
 
   return (
-    <div style={{ backgroundColor: "#12090c", color: "#fff9fa", minHeight: "100vh", fontFamily: "'Jost', sans-serif", position: "relative", overflow: "hidden" }} ref={containerRef}>
+    <div style={{ backgroundColor: "#080808", color: "#fff", minHeight: "100vh", fontFamily: "'Jost', sans-serif" }} ref={containerRef}>
       <Navbar />
 
-      {/* AMBIENT FEMININE GLOW PARTICLES / ORBS */}
-      <motion.div 
-         animate={{ y: [0, -40, 0], x: [0, 20, 0], opacity: [0.2, 0.4, 0.2] }} 
-         transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-         style={{ position: "absolute", top: "5%", left: "-10%", width: "50vw", height: "50vw", background: "radial-gradient(circle, rgba(230, 122, 154, 0.15) 0%, transparent 60%)", filter: "blur(60px)", zIndex: 0, pointerEvents: "none" }} 
-      />
-      <motion.div 
-         animate={{ y: [0, 50, 0], x: [0, -30, 0], opacity: [0.15, 0.3, 0.15] }} 
-         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-         style={{ position: "absolute", top: "50%", right: "-15%", width: "60vw", height: "60vw", background: "radial-gradient(circle, rgba(229, 192, 123, 0.1) 0%, transparent 60%)", filter: "blur(80px)", zIndex: 0, pointerEvents: "none" }} 
-      />
-
-      <main style={{ paddingTop: "72px", position: "relative", zIndex: 1 }}>
+      <main style={{ paddingTop: "72px" }}>
         {/* Hero Section */}
         <div style={{ position: "relative", width: "100%", height: "70vh", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <motion.div style={{ position: "absolute", inset: 0, y: yParallax, opacity: opacityParallax }}>
-            {/* Adding a subtle sepia & hue shift to instantly warm the hero image aesthetic */}
-            <img src={heroImage} alt="Womenswear Hero" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.75) contrast(1.05) sepia(0.15) hue-rotate(-10deg)" }} />
+            <video
+              src="/women-hero.mp4"
+              autoPlay
+              loop
+              muted
+              playsInline
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                filter: "brightness(0.65) contrast(1.05) blur(3px) saturate(1.1)",
+                transform: "scale(1.04)",
+              }}
+            />
           </motion.div>
 
-          {/* Vignette Overlay fading to deep Mulberry/Plum black */}
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at center, transparent 0%, #12090c 130%)", zIndex: 1 }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, #12090c 0%, transparent 50%)", zIndex: 2 }} />
-          
-          <motion.div 
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at center, transparent 0%, #080808 120%)", zIndex: 1 }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, #080808 0%, transparent 40%)", zIndex: 2 }} />
+
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
+            transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
             style={{ position: "relative", zIndex: 10, textAlign: "center" }}
           >
-            <p style={{ fontSize: "11px", letterSpacing: "0.5em", color: "#e67a9a", marginBottom: "16px", textTransform: "uppercase" }}>DVSK CLO.</p>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(5.5rem, 15vw, 13rem)", lineHeight: 0.85, fontWeight: 300, fontStyle: "italic", margin: 0, textShadow: "0 20px 40px rgba(230, 122, 154, 0.3)", color: "#fff9fa" }}>
+            <p style={{ fontSize: "11px", letterSpacing: "0.5em", color: "rgba(255,255,255,0.7)", marginBottom: "24px" }}>DVSK CLO.</p>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(4.5rem, 12vw, 11rem)", lineHeight: 0.85, fontWeight: 300, margin: 0, textTransform: "uppercase", textShadow: "0 20px 40px rgba(0,0,0,0.5)" }}>
               Women
             </h1>
           </motion.div>
@@ -120,31 +129,34 @@ export default function Womenswear() {
 
         {/* Collection Info & Shop Grid */}
         <div style={{ padding: "60px clamp(20px, 4vw, 56px) 100px", maxWidth: "1600px", margin: "0 auto", display: "flex", gap: "60px", flexDirection: "row", flexWrap: "wrap", position: "relative", zIndex: 10 }}>
-          
+
           {/* Left Sidebar Filters */}
           <div className="filter-sidebar" style={{ width: "240px", flexShrink: 0 }}>
             <div style={{ position: "sticky", top: "120px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "30px", borderBottom: "0.5px solid rgba(230, 122, 154, 0.15)", paddingBottom: "20px" }}>
-                <SlidersHorizontal size={16} color="#e67a9a" />
-                <h3 style={{ fontSize: "12px", letterSpacing: "0.2em", fontWeight: 400, margin: 0, color: "#fff9fa" }}>FILTER & SORT</h3>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "30px", borderBottom: "0.5px solid rgba(255,255,255,0.08)", paddingBottom: "20px" }}>
+                <SlidersHorizontal size={16} color="rgba(255,255,255,0.6)" />
+                <h3 style={{ fontSize: "12px", letterSpacing: "0.2em", fontWeight: 400, margin: 0 }}>FILTER & SORT</h3>
               </div>
 
               {/* Categories */}
               <div style={{ marginBottom: "40px" }}>
-                <h4 style={{ fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,249,250,0.5)", marginBottom: "16px", textTransform: "uppercase" }}>Collection</h4>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "14px" }}>
+                <h4 style={{ fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.3)", marginBottom: "16px", textTransform: "uppercase" }}>Category</h4>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexWrap: "wrap", gap: "10px" }}>
                   {CATEGORIES.map(cat => (
                     <li key={cat}>
-                      <button 
+                      <button
                         onClick={() => setActiveCategory(cat)}
-                        style={{ 
-                          background: "none", border: "none", color: activeCategory === cat ? "#fff9fa" : "rgba(255,249,250,0.4)", 
-                          fontSize: "12px", letterSpacing: "0.15em", cursor: "pointer", padding: 0, fontFamily: "'Jost', sans-serif",
-                          transition: "color 0.4s ease", display: "flex", alignItems: "center", gap: "12px", textTransform: "uppercase"
+                        style={{
+                          background: activeCategory === cat ? "rgba(139, 43, 226, 0.15)" : "transparent",
+                          border: activeCategory === cat ? "1px solid rgba(139, 43, 226, 0.4)" : "1px solid rgba(255,255,255,0.05)",
+                          color: activeCategory === cat ? "#fff" : "rgba(255,255,255,0.45)",
+                          borderRadius: "100px", padding: "8px 16px",
+                          fontSize: "10px", letterSpacing: "0.15em", cursor: "pointer", fontFamily: "'Jost', sans-serif",
+                          transition: "all 0.3s ease", display: "flex", alignItems: "center", textTransform: "uppercase"
                         }}
+                        className="cat-btn"
                       >
-                        <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: activeCategory === cat ? "#e67a9a" : "transparent", transition: "background-color 0.4s ease, box-shadow 0.4s ease", boxShadow: activeCategory === cat ? "0 0 10px #e67a9a" : "none" }} />
-                        <span style={{ transform: activeCategory === cat ? "translateX(4px)" : "translateX(0)", transition: "transform 0.4s ease" }}>{cat}</span>
+                        {cat}
                       </button>
                     </li>
                   ))}
@@ -154,125 +166,139 @@ export default function Womenswear() {
               {/* Price Range */}
               <div style={{ marginBottom: "40px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "16px" }}>
-                  <h4 style={{ fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,249,250,0.5)", margin: 0, textTransform: "uppercase" }}>Price Focus</h4>
-                  <span style={{ fontSize: "11px", color: "#e67a9a", letterSpacing: "0.1em" }}>Up to ₹{maxPrice.toLocaleString()}</span>
+                  <h4 style={{ fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.3)", margin: 0, textTransform: "uppercase" }}>Price</h4>
+                  <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", letterSpacing: "0.1em" }}>Up to ₹{maxPrice.toLocaleString()}</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="10000" 
+                <input
+                  type="range"
+                  min="0"
+                  max="10000"
                   step="100"
-                  value={maxPrice} 
+                  value={maxPrice}
                   onChange={(e) => setMaxPrice(Number(e.target.value))}
-                  className="girly-slider"
+                  className="premium-slider"
                   style={{ width: "100%" }}
                 />
               </div>
 
               {/* Sort By */}
               <div>
-                <h4 style={{ fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,249,250,0.5)", marginBottom: "16px", textTransform: "uppercase" }}>Sort Selection</h4>
+                <h4 style={{ fontSize: "10px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.3)", marginBottom: "16px", textTransform: "uppercase" }}>Sort By</h4>
                 <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                   {SORT_OPTIONS.map(opt => (
-                    <label key={opt.value} style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }}>
-                      <div style={{ width: "16px", height: "16px", borderRadius: "50%", border: `1px solid ${sortBy === opt.value ? '#e67a9a' : 'rgba(230, 122, 154, 0.2)'}`, display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.4s" }}>
+                    <label key={opt.value} className="sort-label" style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer", padding: "6px 0" }}>
+                      <div style={{ width: "16px", height: "16px", borderRadius: "50%", border: `1.5px solid ${sortBy === opt.value ? '#8B2BE2' : 'rgba(255,255,255,0.2)'}`, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.3s ease", boxShadow: sortBy === opt.value ? "0 0 10px rgba(139,43,226,0.3)" : "none" }}>
                         <AnimatePresence>
                           {sortBy === opt.value && (
-                            <motion.div 
-                              initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ duration: 0.3 }}
-                              style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#e67a9a", boxShadow: "0 0 8px #e67a9a" }}
+                            <motion.div
+                              initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ duration: 0.2 }}
+                              style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#8B2BE2", boxShadow: "0 0 6px #8B2BE2" }}
                             />
                           )}
                         </AnimatePresence>
                       </div>
-                      <input 
-                        type="radio" 
-                        name="sort" 
-                        value={opt.value} 
-                        checked={sortBy === opt.value} 
+                      <input
+                        type="radio"
+                        name="sort"
+                        value={opt.value}
+                        checked={sortBy === opt.value}
                         onChange={(e) => setSortBy(e.target.value)}
                         style={{ display: "none" }}
                       />
-                      <span style={{ fontSize: "12px", letterSpacing: "0.1em", color: sortBy === opt.value ? "#fff9fa" : "rgba(255,249,250,0.4)", transition: "color 0.4s", textTransform: "uppercase" }}>
+                      <span style={{ fontSize: "12px", letterSpacing: "0.1em", color: sortBy === opt.value ? "#fff" : "rgba(255,255,255,0.4)", transition: "color 0.3s", textTransform: "uppercase" }}>
                         {opt.label}
                       </span>
                     </label>
                   ))}
                 </div>
               </div>
-
             </div>
           </div>
 
           {/* Right Main Content */}
           <div style={{ flex: 1, minWidth: "320px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px", borderBottom: "0.5px solid rgba(230, 122, 154, 0.15)", paddingBottom: "20px" }}>
-              <span style={{ fontSize: "11px", letterSpacing: "0.2em", color: "rgba(255,249,250,0.5)" }}>VIEWING {filteredProducts.length} {filteredProducts.length === 1 ? 'PIECE' : 'PIECES'}</span>
-            </div>
+            <TypeFilterBar
+              products={products.filter(p => activeCategory === "ALL" || p.category.name.toUpperCase() === activeCategory)}
+              filters={APPAREL_FILTERS}
+              active={typeFilter}
+              onChange={setTypeFilter}
+              resultCount={filteredProducts.length}
+              sortValue={sortBy}
+              sortOptions={SORT_OPTIONS}
+              onSortChange={setSortBy}
+            />
 
-            <motion.div layout style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "60px 40px" }}>
+            <motion.div layout style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "50px 30px" }}>
               {loading ? (
                 <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "120px 0", gap: "20px" }}>
                   <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
-                    <Loader2 size={28} color="#e67a9a" />
+                    <Loader2 size={28} color="rgba(139, 43, 226, 0.6)" />
                   </motion.div>
-                  <span style={{ fontSize: "11px", letterSpacing: "0.2em", color: "rgba(255,249,250,0.3)", textTransform: "uppercase" }}>Loading collection...</span>
+                  <span style={{ fontSize: "11px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>Loading collection...</span>
                 </div>
               ) : error ? (
-                <div style={{ gridColumn: "1 / -1", padding: "120px 0", textAlign: "center", color: "rgba(255,249,250,0.4)" }}>
+                <div style={{ gridColumn: "1 / -1", padding: "120px 0", textAlign: "center", color: "rgba(255,255,255,0.4)" }}>
                   <p style={{ fontSize: "14px", letterSpacing: "0.1em" }}>{error}</p>
-                  <button onClick={() => window.location.reload()} style={{ marginTop: "24px", background: "none", border: "0.5px solid rgba(230, 122, 154, 0.3)", borderRadius: "100px", padding: "12px 32px", color: "#e67a9a", cursor: "pointer", letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase" }} className="reset-btn">RETRY</button>
+                  <button onClick={() => window.location.reload()} style={{ marginTop: "24px", background: "rgba(139, 43, 226, 0.1)", border: "1px solid rgba(139, 43, 226, 0.4)", borderRadius: "100px", padding: "12px 32px", color: "#fff", cursor: "pointer", letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase" }} className="reset-btn">RETRY</button>
                 </div>
               ) : (
               <AnimatePresence mode="popLayout">
                 {filteredProducts.map((prod) => (
-                  <motion.div 
+                  <motion.div
                     layout
                     key={prod.id}
                     onClick={() => navigate(`/product/${prod.slug}`)}
-                    initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+                    initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
                     animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                    exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
-                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                     style={{ cursor: "pointer", textAlign: "left" }}
                     className="product-wrapper"
                   >
-                    {/* Rounded Image Borders for softer aesthetic */}
-                    <div style={{ width: "100%", aspectRatio: "3/4", overflow: "hidden", position: "relative", marginBottom: "20px", background: "rgba(230, 122, 154, 0.03)", borderRadius: "16px", border: "1px solid rgba(230, 122, 154, 0.05)", boxShadow: "0 10px 30px rgba(0,0,0,0.2)" }}>
-                      <img src={prod.images?.[0]?.url || fallbackImage} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s ease" }} className="product-image" onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage; }} />
-                      
-                      {/* Chic View Overlay */}
-                      <div style={{ position: "absolute", inset: 0, background: "rgba(18, 9, 12, 0.25)", opacity: 0, transition: "opacity 0.5s", display: "flex", alignItems: "center", justifyContent: "center" }} className="product-overlay">
-                        <span style={{ padding: "12px 28px", background: "rgba(230, 122, 154, 0.1)", border: "1px solid rgba(230, 122, 154, 0.3)", borderRadius: "100px", fontSize: "10px", letterSpacing: "0.2em", backdropFilter: "blur(12px)", color: "#fff9fa", transition: "all 0.4s ease" }} className="view-btn">QUICK VIEW</span>
+                    <div style={{ width: "100%", aspectRatio: "3/4", overflow: "hidden", position: "relative", marginBottom: "16px", background: "linear-gradient(135deg, #0a0a0a 0%, #161616 50%, #0a0a0a 100%)" }}>
+                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "8px" }}>
+                        <div style={{ fontSize: "10px", letterSpacing: "0.3em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase" }}>No Image</div>
+                        <div style={{ fontSize: "9px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.15)" }}>DVSK</div>
+                      </div>
+                      {prod.images?.[0]?.url && (
+                        <img
+                          src={prod.images[0].url}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", position: "relative", zIndex: 1, transition: "transform 1s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease" }}
+                          className="product-image"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      )}
+
+                      <div style={{ position: "absolute", inset: 0, background: "rgba(8,8,8,0.4)", opacity: 0, transition: "opacity 0.4s", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }} className="product-overlay">
+                        <span style={{ padding: "12px 28px", background: "rgba(139, 43, 226, 0.2)", border: "1px solid rgba(139, 43, 226, 0.5)", borderRadius: "100px", fontSize: "10px", letterSpacing: "0.25em", backdropFilter: "blur(8px)", color: "#fff", transition: "all 0.3s ease", boxShadow: "0 4px 20px rgba(139, 43, 226, 0.2)" }} className="view-btn">QUICK VIEW</span>
                       </div>
 
-                      <div style={{ position: "absolute", top: "16px", left: "16px", background: "rgba(0,0,0,0.3)", border: "0.5px solid rgba(230, 122, 154, 0.15)", backdropFilter: "blur(10px)", padding: "6px 12px", fontSize: "9px", letterSpacing: "0.2em", color: "#e67a9a", borderRadius: "100px" }}>
+                      <div style={{ position: "absolute", top: "15px", left: "15px", background: "rgba(0,0,0,0.4)", border: "0.5px solid rgba(255,255,255,0.1)", backdropFilter: "blur(8px)", padding: "4px 8px", fontSize: "9px", letterSpacing: "0.15em", color: "rgba(255,255,255,0.9)", zIndex: 3 }}>
                         {prod.tag.replace('_', ' ')}
                       </div>
                     </div>
-                    {/* Delicate Typography for Product Info */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "20px", fontWeight: 400, letterSpacing: "0.02em", margin: 0, color: "#fff9fa" }}>{prod.name}</h3>
-                      <span style={{ fontSize: "13px", color: "rgba(255,249,250,0.7)", fontWeight: 300, letterSpacing: "0.05em", fontFamily: "'Jost', sans-serif" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                      <h3 style={{ fontSize: "13px", fontWeight: 400, letterSpacing: "0.1em", margin: 0, textTransform: "uppercase" }}>{prod.name}</h3>
+                      <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", fontWeight: 300, letterSpacing: "0.05em" }}>
                         {prod.salePrice ? (
-                          <><span style={{ textDecoration: "line-through", color: "rgba(255,249,250,0.3)", marginRight: "8px" }}>₹{Number(prod.basePrice).toLocaleString()}</span>₹{Number(prod.salePrice).toLocaleString()}</>
+                          <><span style={{ textDecoration: "line-through", color: "rgba(255,255,255,0.3)", marginRight: "8px" }}>₹{Number(prod.basePrice).toLocaleString()}</span>₹{Number(prod.salePrice).toLocaleString()}</>
                         ) : (
                           <>₹{Number(prod.basePrice).toLocaleString()}</>
                         )}
                       </span>
                     </div>
-                    <div style={{ fontSize: "10px", color: "rgba(230, 122, 154, 0.6)", marginTop: "6px", letterSpacing: "0.15em", textTransform: "uppercase" }}>{prod.category.name}</div>
+                    <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", marginTop: "8px", letterSpacing: "0.15em", textTransform: "uppercase" }}>{prod.category.name}</div>
                   </motion.div>
                 ))}
               </AnimatePresence>
               )}
             </motion.div>
-            
-            {filteredProducts.length === 0 && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ padding: "120px 0", textAlign: "center", color: "rgba(255,249,250,0.4)" }}>
-                <SlidersHorizontal size={32} color="rgba(230, 122, 154, 0.2)" style={{ margin: "0 auto 20px" }} />
-                <p style={{ fontSize: "14px", letterSpacing: "0.1em", textTransform: "uppercase" }}>No pieces match your exact criteria.</p>
-                <button onClick={() => { setActiveCategory("ALL"); setMaxPrice(10000); setSortBy("featured"); }} style={{ marginTop: "24px", background: "none", border: "0.5px solid rgba(230, 122, 154, 0.3)", borderRadius: "100px", padding: "12px 32px", color: "#e67a9a", cursor: "pointer", letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase", transition: "all 0.4s ease" }} className="reset-btn">
+
+            {!loading && !error && filteredProducts.length === 0 && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ padding: "120px 0", textAlign: "center", color: "rgba(255,255,255,0.4)" }}>
+                <SlidersHorizontal size={32} color="rgba(255,255,255,0.2)" style={{ margin: "0 auto 20px" }} />
+                <p style={{ fontSize: "14px", letterSpacing: "0.1em", textTransform: "uppercase" }}>No products match your criteria.</p>
+                <button onClick={() => { setActiveCategory("ALL"); setMaxPrice(10000); setSortBy("featured"); setTypeFilter("ALL"); }} style={{ marginTop: "24px", background: "rgba(139, 43, 226, 0.1)", border: "1px solid rgba(139, 43, 226, 0.4)", borderRadius: "100px", padding: "12px 32px", color: "#fff", cursor: "pointer", letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase", transition: "all 0.3s ease" }} className="reset-btn">
                   CLEAR FILTERS
                 </button>
               </motion.div>
@@ -285,71 +311,71 @@ export default function Womenswear() {
 
       <style>{`
         .product-wrapper:hover .product-image {
-          transform: scale(1.04); 
-          filter: brightness(0.9) saturate(1.1);
+          transform: scale(1.05);
+          filter: brightness(0.85);
         }
         .product-wrapper:hover .product-overlay {
           opacity: 1;
         }
         .view-btn:hover {
-          background: rgba(230, 122, 154, 0.25) !important;
-          border-color: #e67a9a !important;
-          color: #fff;
+          background: rgba(139, 43, 226, 0.5) !important;
+          box-shadow: 0 4px 30px rgba(139, 43, 226, 0.6) !important;
+          letter-spacing: 0.3em !important;
         }
         .reset-btn:hover {
-          background: rgba(230, 122, 154, 0.1);
-          border-color: #e67a9a;
-          color: #fff9fa;
+          background: rgba(139, 43, 226, 0.3);
+          border-color: #8B2BE2;
+          box-shadow: 0 0 20px rgba(139, 43, 226, 0.4);
+        }
+        .cat-btn:hover {
+          border-color: rgba(139, 43, 226, 0.6) !important;
+          background: rgba(139, 43, 226, 0.1);
+          color: #fff !important;
+        }
+        .sort-label:hover span {
+          color: #fff !important;
         }
 
-        /* Feminine Chic Slider Styling */
-        .girly-slider {
+        .premium-slider {
           -webkit-appearance: none;
-          width: 100%;
-          height: 1px;
-          background: rgba(230, 122, 154, 0.2);
+          appearance: none;
+          height: 2px;
+          background: rgba(255,255,255,0.1);
           outline: none;
-          opacity: 0.8;
-          -webkit-transition: .4s;
-          transition: opacity .4s;
+          border-radius: 1px;
         }
-
-        .girly-slider:hover {
-          opacity: 1;
+        .premium-slider:hover {
+          background: rgba(139,43,226,0.3);
         }
-
-        .girly-slider::-webkit-slider-thumb {
+        .premium-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
           width: 14px;
           height: 14px;
           border-radius: 50%;
-          background: #fff9fa;
+          background: #fff;
           cursor: pointer;
-          border: 1px solid #e67a9a;
-          box-shadow: 0 0 0 4px rgba(230, 122, 154, 0.1), 0 0 12px rgba(230, 122, 154, 0.5);
-          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 0 10px rgba(139, 43, 226, 0.4);
+          transition: transform 0.2s ease, box-shadow 0.3s ease;
         }
-
-        .girly-slider::-moz-range-thumb {
+        .premium-slider::-moz-range-thumb {
           width: 14px;
           height: 14px;
           border-radius: 50%;
-          background: #fff9fa;
+          background: #fff;
           cursor: pointer;
-          border: 1px solid #e67a9a;
-          box-shadow: 0 0 0 4px rgba(230, 122, 154, 0.1), 0 0 12px rgba(230, 122, 154, 0.5);
+          border: none;
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 0 10px rgba(139, 43, 226, 0.4);
         }
-        
-        .girly-slider::-webkit-slider-thumb:hover {
-          transform: scale(1.4);
-          box-shadow: 0 0 0 2px #e67a9a, 0 0 20px rgba(230, 122, 154, 0.8);
+        .premium-slider::-webkit-slider-thumb:hover {
+          transform: scale(1.3);
+          box-shadow: 0 0 0 2px #8B2BE2, 0 0 15px rgba(139, 43, 226, 0.7);
         }
 
         @media (max-width: 900px) {
           .filter-sidebar {
             width: 100% !important;
-            border-bottom: 0.5px solid rgba(230, 122, 154, 0.15);
+            border-bottom: 0.5px solid rgba(255,255,255,0.08);
             padding-bottom: 30px;
             margin-bottom: 10px;
           }

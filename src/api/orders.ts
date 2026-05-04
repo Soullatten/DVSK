@@ -1,8 +1,25 @@
 import { apiClient } from './client';
 
+export interface ShippingAddressInput {
+  fullName: string;
+  phone: string;
+  email?: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country?: string;
+}
+
 export const ordersApi = {
-  createOrder: async (addressId: string, couponCode?: string, notes?: string) => {
-    const response = await apiClient.post('/orders', { addressId, couponCode, notes });
+  createOrder: async (payload: {
+    shippingAddress?: ShippingAddressInput;
+    addressId?: string;
+    couponCode?: string;
+    notes?: string;
+  }) => {
+    const response = await apiClient.post('/orders', payload);
     return response.data.data;
   },
 

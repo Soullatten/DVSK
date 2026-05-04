@@ -14,9 +14,11 @@ import Campaigns from './pages/Campaigns.tsx'
 import ClientServices from './pages/ClientServices.tsx'
 import SizeGuide from './pages/SizeGuide.tsx'
 import PageWrapper from './components/PageWrapper.tsx'
+import { useStorefrontTracker } from './lib/storefrontTracker';
 
 export default function AppRoutes() {
   const location = useLocation();
+  useStorefrontTracker();
 
   return (
     <AnimatePresence mode="wait">
