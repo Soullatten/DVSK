@@ -48,6 +48,11 @@ app.use(
       // allow tools like Postman / curl (no origin header)
       if (!origin) return callback(null, true);
 
+      // Electron packaged apps loaded via file:// send Origin: "null" or "file://"
+      if (origin === "null" || origin.startsWith("file://")) {
+        return callback(null, true);
+      }
+
       if (env.ALLOWED_ORIGINS.includes(origin)) {
         return callback(null, true);
       }
