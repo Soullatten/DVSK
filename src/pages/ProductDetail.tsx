@@ -10,6 +10,7 @@ import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { productsApi } from "../api/products";
 import type { Product } from "../api/types";
+import fallbackImage from "../assets/image6.png";
 
 
 export default function ProductDetail() {
