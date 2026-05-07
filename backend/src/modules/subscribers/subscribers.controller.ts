@@ -228,7 +228,7 @@ export async function broadcastToSubscribers(req: Request, res: Response) {
 // ── Admin: delete (hard delete, for GDPR-style requests) ──
 export async function deleteSubscriber(req: Request, res: Response) {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     await prisma.subscriber.delete({ where: { id } });
     return success(res, { ok: true }, "Subscriber removed");
   } catch (err: any) {
