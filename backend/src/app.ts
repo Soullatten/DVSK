@@ -63,6 +63,23 @@ const isDevLocalOrigin = (origin: string) => {
   }
 };
 
+// Allow ANY Vercel deployment URL for this project. Vercel creates a new
+// `dvsk-XXXXX.vercel.app` URL per deploy, plus the stable alias
+// `dvsk-alpha.vercel.app`. Without this, every new deploy would break CORS
+// until we manually added its URL to ALLOWED_ORIGINS. The regex restricts
+// to URLs starting with "dvsk-" + a valid Vercel preview suffix, so other
+// people's Vercel projects can't reach this backend.
+const isDvskVercelOrigin = (origin: string) => {
+  try {
+    const u = new URL(origin);
+    if (u.protocol !== "https:") return false;
+    return /^dvsk[a-z0-9-]*\.vercel\.app$/i.test(u.hostname) ||
+           /^dvsk-[a-z0-9-]+-krishivrajputgmailcoms-projects\.vercel\.app$/i.test(u.hostname);
+  } catch {
+    return false;
+  }
+};
+
 app.use(
   cors({
     origin(origin, callback) {
@@ -79,6 +96,12 @@ app.use(
       }
 
       if (isDevLocalOrigin(origin)) {
+        return callback(null, true);
+      }
+
+      // Vercel preview deploys for this project — keeps every preview URL
+      // working without needing to update ALLOWED_ORIGINS each time.
+      if (isDvskVercelOrigin(origin)) {
         return callback(null, true);
       }
 

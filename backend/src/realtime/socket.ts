@@ -28,10 +28,22 @@ function broadcastViewers() {
 
 // Mirror the HTTP CORS rule: in dev, also accept localhost / 127.0.0.1 /
 // private-LAN origins so phones on the same wifi can connect.
+// Plus accept any Vercel preview deploy for this project so live tracking
+// works on every deployment, not just the stable alias.
 const isAllowedSocketOrigin = (origin: string | undefined): boolean => {
   if (!origin) return true;
   if (origin === "null" || origin.startsWith("file://")) return true;
   if (env.ALLOWED_ORIGINS.includes(origin)) return true;
+
+  // Vercel preview / production URLs for this project (works in every env).
+  try {
+    const u = new URL(origin);
+    if (u.protocol === "https:" && (
+      /^dvsk[a-z0-9-]*\.vercel\.app$/i.test(u.hostname) ||
+      /^dvsk-[a-z0-9-]+-krishivrajputgmailcoms-projects\.vercel\.app$/i.test(u.hostname)
+    )) return true;
+  } catch { /* fall through */ }
+
   if (env.NODE_ENV === "production") return false;
   try {
     const u = new URL(origin);
