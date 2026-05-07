@@ -8,7 +8,7 @@ export default function ClientServices() {
   const navigate = useNavigate();
 
   return (
-    <div style={{ background: '#020202', minHeight: '100vh', color: '#fff', paddingTop: '150px', paddingBottom: '100px', paddingLeft: 'clamp(20px, 5vw, 100px)', paddingRight: 'clamp(20px, 5vw, 100px)', fontFamily: "'Jost', sans-serif", position: 'relative' }}>
+    <div className="dvsk-page-services" style={{ background: '#020202', minHeight: '100vh', color: '#fff', paddingTop: '150px', paddingBottom: '100px', paddingLeft: 'clamp(20px, 5vw, 100px)', paddingRight: 'clamp(20px, 5vw, 100px)', fontFamily: "'Jost', sans-serif", position: 'relative' }}>
       
       {/* Return Button */}
       <button 
@@ -80,6 +80,21 @@ export default function ClientServices() {
         </motion.div>
       </div>
 
+      <style>{`
+        @media (max-width: 768px) {
+          .dvsk-page-services { padding-top: 110px !important; padding-bottom: 60px !important; }
+          .dvsk-page-services > div:nth-child(2) {
+            grid-template-columns: 1fr !important;
+            gap: 56px !important;
+          }
+          .dvsk-page-services h1 { font-size: clamp(2.4rem, 11vw, 4rem) !important; }
+          .dvsk-page-services input, .dvsk-page-services textarea { font-size: 14px !important; padding: 12px 0 !important; }
+          .dvsk-page-services form > div:first-child button { font-size: 9px !important; padding: 8px 14px !important; }
+        }
+        @media (max-width: 480px) {
+          .dvsk-page-services { padding-left: 18px !important; padding-right: 18px !important; }
+        }
+      `}</style>
     </div>
   );
 }

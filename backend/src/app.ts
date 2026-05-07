@@ -26,6 +26,9 @@ import panelRoutes from "./modules/panel/panel.routes.js";
 import purchaseOrderRoutes from "./modules/purchase-orders/po.routes.js";
 import marketingRoutes from "./modules/marketing/marketing.routes.js";
 import devRoutes from "./modules/dev/dev.routes.js";
+import emailRoutes from "./modules/email/email.routes.js";
+import couponsPublicRoutes from "./modules/coupons/coupons.routes.js";
+import { subscribersPublicRouter, subscribersAdminRouter } from "./modules/subscribers/subscribers.routes.js";
 
 const app = express();
 
@@ -42,6 +45,24 @@ app.use(
     crossOriginEmbedderPolicy: false,
   })
 );
+// In dev, also accept any localhost / 127.0.0.1 / private-LAN IP origin so
+// you can test the storefront from a phone on the same wifi (origin will be
+// http://192.168.x.x:<vite port>) without hardcoding the host's address.
+const isDevLocalOrigin = (origin: string) => {
+  if (env.NODE_ENV === "production") return false;
+  try {
+    const u = new URL(origin);
+    if (u.hostname === "localhost" || u.hostname === "127.0.0.1") return true;
+    // RFC1918 private ranges: 10.x, 172.16–31.x, 192.168.x
+    if (/^10\./.test(u.hostname)) return true;
+    if (/^192\.168\./.test(u.hostname)) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(u.hostname)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+};
+
 app.use(
   cors({
     origin(origin, callback) {
@@ -54,6 +75,10 @@ app.use(
       }
 
       if (env.ALLOWED_ORIGINS.includes(origin)) {
+        return callback(null, true);
+      }
+
+      if (isDevLocalOrigin(origin)) {
         return callback(null, true);
       }
 
@@ -91,11 +116,16 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/coupons", couponsPublicRoutes);
+// Newsletter subscribers — public POST for footer signups, admin GET for list
+app.use("/api/subscribers", subscribersPublicRouter);
+app.use("/api/admin/subscribers", subscribersAdminRouter);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/admin/chat", chatRoutes);
+app.use("/api/admin/email", emailRoutes);
 app.use("/api/admin/purchase-orders", purchaseOrderRoutes);
 app.use("/api/dev", devRoutes);
 app.use("/api/admin", marketingRoutes);

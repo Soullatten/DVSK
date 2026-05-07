@@ -498,6 +498,13 @@ export default function ProductDetail() {
           .pdp-info { position: relative !important; top: 0 !important; }
           .scroll-tracker { display: none !important; }
         }
+        @media (max-width: 640px) {
+          .pdp-info { padding: 24px 20px !important; }
+          .pdp-gallery { padding: 0 !important; }
+          .size-btn { font-size: 11px !important; padding: 12px !important; }
+          .qty-selector { width: 100% !important; }
+          .elegant-buy-btn { width: 100% !important; padding: 18px 24px !important; font-size: 12px !important; }
+        }
       `}</style>
     </div>
   );

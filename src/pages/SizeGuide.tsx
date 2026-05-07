@@ -13,7 +13,7 @@ export default function SizeGuide() {
   }, []);
 
   return (
-    <div style={{ backgroundColor: "#020202", color: "#fff", minHeight: "100vh", fontFamily: "'Jost', sans-serif" }}>
+    <div className="dvsk-page-sizeguide" style={{ backgroundColor: "#020202", color: "#fff", minHeight: "100vh", fontFamily: "'Jost', sans-serif" }}>
       <Navbar />
 
       <main style={{ paddingTop: "150px", paddingBottom: "100px", maxWidth: "1200px", margin: "0 auto", paddingLeft: "clamp(20px, 4vw, 60px)", paddingRight: "clamp(20px, 4vw, 60px)" }}>
@@ -125,6 +125,21 @@ export default function SizeGuide() {
       </main>
 
       <Footer />
+
+      <style>{`
+        @media (max-width: 768px) {
+          .dvsk-page-sizeguide main { padding-top: 110px !important; }
+          .dvsk-page-sizeguide h1 { font-size: clamp(2rem, 9vw, 3rem) !important; }
+          .dvsk-page-sizeguide table { font-size: 12px !important; min-width: 480px !important; }
+          .dvsk-page-sizeguide th, .dvsk-page-sizeguide td { padding: 12px 14px !important; }
+          .dvsk-page-sizeguide ul li { font-size: 13px !important; }
+        }
+        @media (max-width: 480px) {
+          .dvsk-page-sizeguide main { padding-left: 18px !important; padding-right: 18px !important; }
+          .dvsk-page-sizeguide table { font-size: 11px !important; }
+          .dvsk-page-sizeguide th, .dvsk-page-sizeguide td { padding: 10px 12px !important; }
+        }
+      `}</style>
     </div>
   );
 }

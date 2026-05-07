@@ -87,7 +87,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           variant: `${item.variant.color} / ${item.variant.size}`,
           price: Number(item.variant.priceOverride || item.product.salePrice || item.product.basePrice),
           qty: item.quantity,
-          image: '', // Backend cart doesn't include images in the nested select
+          image: item.product.images?.[0]?.url || '',
           slug: item.product.slug,
         }));
         setItems(mapped);
@@ -116,7 +116,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             variant: `${item.variant.color} / ${item.variant.size}`,
             price: Number(item.variant.priceOverride || item.product.salePrice || item.product.basePrice),
             qty: item.quantity,
-            image: '',
+            image: item.product.images?.[0]?.url || '',
             slug: item.product.slug,
           }));
           setItems(mapped);
@@ -169,7 +169,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             variant: `${item.variant.color} / ${item.variant.size}`,
             price: Number(item.variant.priceOverride || item.product.salePrice || item.product.basePrice),
             qty: item.quantity,
-            image: '',
+            image: item.product.images?.[0]?.url || '',
             slug: item.product.slug,
           }));
           setItems(mapped);
@@ -200,7 +200,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             variant: `${item.variant.color} / ${item.variant.size}`,
             price: Number(item.variant.priceOverride || item.product.salePrice || item.product.basePrice),
             qty: item.quantity,
-            image: '',
+            image: item.product.images?.[0]?.url || '',
             slug: item.product.slug,
           }));
           setItems(mapped);

@@ -41,6 +41,14 @@ export const updatePurchaseOrderSchema = z.object({
   lng: z.number().optional(),
   notes: optionalString,
   progress: z.number().int().min(0).max(100).optional(),
+  // Shipment detail fields — admin can update any of these to record where
+  // a supplier shipment is in transit. All optional and nullable so the
+  // admin can clear them by sending null.
+  carrier: optionalString,
+  trackingNumber: optionalString,
+  dispatchedAt: optionalString,
+  weight: optionalString,
+  shipmentNotes: optionalString,
   lineItems: z.array(z.object({
     variantId: z.string().min(1),
     quantity: z.number().int().positive(),

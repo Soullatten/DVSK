@@ -65,6 +65,7 @@ export default function TypeFilterBar<T extends Product>({
 
   return (
     <div
+      className="dvsk-type-filter"
       style={{
         marginBottom: "40px",
         borderBottom: "0.5px solid rgba(255,255,255,0.08)",
@@ -265,6 +266,14 @@ export default function TypeFilterBar<T extends Product>({
 
       <style>{`
         .filter-tabs-row::-webkit-scrollbar { display: none; }
+        @media (max-width: 640px) {
+          .dvsk-type-filter { margin-bottom: 24px !important; }
+          .dvsk-type-filter > div:first-child { gap: 10px !important; margin-bottom: 14px !important; }
+          .dvsk-type-filter span,
+          .dvsk-type-filter button { font-size: 10px !important; }
+          .filter-tabs-row { gap: 6px !important; }
+          .filter-tabs-row button { padding: 9px 16px !important; font-size: 10px !important; }
+        }
       `}</style>
     </div>
   );

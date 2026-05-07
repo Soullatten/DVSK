@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useId, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ShoppingBag, Search, X, Star, Loader2 } from 'lucide-react';
+import { ShoppingBag, Search, X, Star, Loader2, LogOut, User as UserIcon, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +8,8 @@ import CartSidebar from './CartSidebar';
 import WishlistSidebar from './WishlistSidebar';
 import { useCart } from '../context/CartContext';
 import { searchApi } from '../api/search';
+import { auth } from '../firebase';
+import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 
 // ─── Set your logo path here ──────────────────────────────────────────────────
 import logo from '../assets/Secondary_logo.svg';
@@ -326,6 +328,18 @@ function StaggeredMenu({
 
       {/* Panel */}
       <aside ref={panelRef} className="sm-panel" aria-hidden={!open}>
+        {/* Close button — only visible on mobile (≤640px) via CSS below */}
+        <button
+          type="button"
+          className="sm-panel-close"
+          aria-label="Close menu"
+          onClick={() => toggleMenu()}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
         <ul className="sm-panel-list" role="list" data-numbering={displayItemNumbering || undefined}>
           {items.map((it, idx) => (
             <li className="sm-panel-itemWrap" key={it.label + idx}>
@@ -441,11 +455,38 @@ function StaggeredMenu({
         .sm-scope .sm-socials-link { font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.5); text-decoration: none; letter-spacing: 0.08em; transition: color 0.2s; font-family: 'Jost', sans-serif; }
         .sm-scope .sm-socials-link:hover { color: #fff; }
 
+        /* Close button inside the panel — hidden on desktop, shown on mobile */
+        .sm-scope .sm-panel-close {
+          display: none;
+        }
         @media (max-width: 640px) {
           .sm-scope .sm-prelayers,
           .sm-scope .sm-panel { width: 100%; }
           .sm-scope .sm-panel { padding: 80px 1.5rem 2rem; }
           .sm-scope .sm-panel-item { font-size: clamp(2rem, 8vw, 3rem); }
+          .sm-scope .sm-panel-close {
+            display: flex;
+            position: absolute;
+            top: 22px;
+            right: 22px;
+            width: 40px;
+            height: 40px;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.04);
+            border: 0.5px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            color: rgba(255,255,255,0.85);
+            cursor: pointer;
+            padding: 0;
+            transition: background 0.2s, color 0.2s, transform 0.2s;
+            z-index: 10001;
+          }
+          .sm-scope .sm-panel-close:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            transform: rotate(90deg);
+          }
         }
       `}</style>
     </div>
@@ -613,20 +654,124 @@ export default function Navbar() {
   const searchRef = useRef<HTMLInputElement>(null);
   const lastScrollY = useRef(0);
 
-  useEffect(() => {
-    const onScroll = () => {
-      const currentScrollY = window.scrollY;
-      setScrolled(currentScrollY > 10);
+  // Track Firebase auth state so the user icon can show the right action:
+  // logged out → click goes to /account login page
+  // logged in  → click opens an account dropdown with Profile + Logout
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(auth.currentUser);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
-      if (currentScrollY > lastScrollY.current && currentScrollY > 150) {
-        setHidden(true);
-      } else {
-        setHidden(false);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setCurrentUser(u));
+    return () => unsub();
+  }, []);
+
+  // Close the account dropdown when the user clicks outside it
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
+        setAccountMenuOpen(false);
       }
-      lastScrollY.current = currentScrollY;
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [accountMenuOpen]);
+
+  const handleLogout = async () => {
+    setAccountMenuOpen(false);
+    try {
+      await signOut(auth);
+      // Wipe the cached Firebase token so subsequent API calls fail cleanly
+      // and the user lands on the public home view.
+      localStorage.removeItem('dvsk_auth_token');
+      navigate('/home');
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
+
+  // Friendly display name + email for the dropdown header
+  const displayName = currentUser?.displayName || currentUser?.email?.split('@')[0] || currentUser?.phoneNumber || 'Account';
+  const displayContact = currentUser?.email || currentUser?.phoneNumber || '';
+  const initials = (currentUser?.displayName || currentUser?.email || 'U')
+    .split(/[\s@]/)
+    .filter(Boolean)
+    .map((s) => s[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  useEffect(() => {
+    // Multi-source scroll detection. Lenis (smooth-scroll lib used in this
+    // project) animates scroll over 1.2s, so by the time `window.scrollY`
+    // reflects a change, the user has felt the lag. We instead listen to
+    // the *input* events directly (wheel + touch) and react instantly,
+    // while RAF polling acts as a backup for any other scroll mechanism.
+    const TOP_ZONE = 80;
+    let rafId = 0;
+    let prevY = window.scrollY;
+    let touchStartY = 0;
+
+    const showNavbar = () => setHidden((h) => (h ? false : h));
+    const hideNavbar = () => setHidden((h) => (h ? h : true));
+
+    const update = (direction: 1 | -1 | 0) => {
+      const y = window.scrollY;
+      setScrolled((p) => (y > 10 ? (p || true) : false));
+      if (y < TOP_ZONE) {
+        showNavbar();
+      } else if (direction === 1) {
+        hideNavbar();
+      } else if (direction === -1) {
+        showNavbar();
+      }
+    };
+
+    // ── 1. Wheel events ── fire immediately on desktop, before Lenis even
+    //    starts animating. Gives instant feedback on direction.
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY > 0) update(1);
+      else if (e.deltaY < 0) update(-1);
+    };
+
+    // ── 2. Touch events ── for mobile/tablet. Track Y delta during swipe.
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0]?.clientY ?? 0;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const cy = e.touches[0]?.clientY ?? 0;
+      const dy = touchStartY - cy; // swipe up = scrolling down
+      if (dy > 5) update(1);
+      else if (dy < -5) update(-1);
+      touchStartY = cy;
+    };
+
+    // ── 3. RAF polling backup ── catches any scroll source we missed
+    //    (keyboard arrows, scrollIntoView, anchor jumps, etc.)
+    const tick = () => {
+      const y = window.scrollY;
+      const dy = y - prevY;
+      if (Math.abs(dy) > 1) {
+        update(dy > 0 ? 1 : -1);
+      } else if (y < TOP_ZONE) {
+        showNavbar();
+      }
+      prevY = y;
+      rafId = requestAnimationFrame(tick);
+    };
+
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    rafId = requestAnimationFrame(tick);
+
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      cancelAnimationFrame(rafId);
+    };
   }, []);
 
   useEffect(() => {
@@ -750,6 +895,67 @@ export default function Navbar() {
           background: #8B2BE2; font-size: 6px; color: white;
         }
 
+        /* ── Account dropdown (visible when user is logged in) ── */
+        .nb-account-wrap { position: relative; display: inline-flex; }
+        .nb-account-avatar {
+          width: 26px; height: 26px; border-radius: 50%;
+          background: linear-gradient(135deg, #ffebab 0%, #d4b572 100%);
+          color: #0a0a0a; font-size: 11px; font-weight: 800;
+          display: flex; align-items: center; justify-content: center;
+          letter-spacing: 0.02em;
+        }
+        .nb-account-dot {
+          position: absolute; top: 4px; right: 4px;
+          width: 8px; height: 8px; border-radius: 50%;
+          background: #34d399; border: 1.5px solid rgba(0,0,0,0.6);
+        }
+        .nb-account-menu {
+          position: absolute; top: calc(100% + 12px); right: 0;
+          width: 260px; padding: 8px;
+          background: rgba(13,13,13,0.96);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 14px;
+          box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+          z-index: 1100;
+          font-family: 'Jost', sans-serif;
+        }
+        .nb-account-header {
+          display: flex; align-items: center; gap: 10px;
+          padding: 10px 8px;
+        }
+        .nb-account-avatar-lg {
+          width: 38px; height: 38px; border-radius: 50%;
+          background: linear-gradient(135deg, #ffebab 0%, #d4b572 100%);
+          color: #0a0a0a; font-size: 14px; font-weight: 800;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+        .nb-account-info { min-width: 0; flex: 1; }
+        .nb-account-name {
+          font-size: 13px; font-weight: 700; color: #fff;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .nb-account-contact {
+          font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 1px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .nb-account-divider {
+          height: 1px; background: rgba(255,255,255,0.08); margin: 4px 0;
+        }
+        .nb-account-item {
+          width: 100%; display: flex; align-items: center; gap: 10px;
+          padding: 10px 10px; border: 0; background: transparent;
+          color: rgba(255,255,255,0.85); font-size: 12.5px; font-weight: 500;
+          cursor: pointer; border-radius: 8px;
+          transition: background 0.15s, color 0.15s;
+          text-align: left;
+        }
+        .nb-account-item:hover { background: rgba(255,235,171,0.08); color: #ffebab; }
+        .nb-account-item-danger:hover { background: rgba(255,80,80,0.08); color: #ff8080; }
+        .nb-account-item span { flex: 1; }
+
         .nb-search-overlay {
           position: fixed; top: 0; left: 0; right: 0;
           height: ${NAVBAR_HEIGHT}px; z-index: 1001;
@@ -775,9 +981,18 @@ export default function Navbar() {
           letter-spacing: 0.12em; text-transform: uppercase;
         }
 
+        @media (max-width: 768px) {
+          .nb-inner { padding: 0 16px; }
+          .nb-right { gap: 6px; }
+          .nb-icon-btn { width: 32px; height: 32px; }
+          .nb-logo-wrap { width: 70px; }
+        }
         @media (max-width: 480px) {
           .nb-icon-btn { width: 30px; height: 30px; }
-          .nb-logo-wrap { width: 60px; }
+          .nb-logo-wrap { width: 56px; }
+          /* Keep the account icon visible on tiny screens — without it
+             logged-in users have no way to access "Log out". */
+          .nb-account-menu { width: 240px; right: -8px; }
         }
       `}</style>
 
@@ -852,13 +1067,76 @@ export default function Navbar() {
               <Search size={18} strokeWidth={1.5} />
             </button>
 
-            {/* ← fixed: uses navigate instead of window.location.href */}
-            <button className="nb-icon-btn" aria-label="Account" onClick={() => navigate('/account')}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </button>
+            {/* Account button — when logged out, navigates to /account
+                login page. When logged in, opens a dropdown with profile
+                info + Logout. Watches Firebase auth state to know which
+                mode it's in. */}
+            <div className="nb-account-wrap" ref={accountMenuRef}>
+              <button
+                className="nb-icon-btn"
+                aria-label="Account"
+                onClick={() => {
+                  if (currentUser) {
+                    setAccountMenuOpen((v) => !v);
+                  } else {
+                    navigate('/account');
+                  }
+                }}
+              >
+                {currentUser ? (
+                  <span className="nb-account-avatar">{initials}</span>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                )}
+                {currentUser && <span className="nb-account-dot" aria-hidden />}
+              </button>
+
+              <AnimatePresence>
+                {accountMenuOpen && currentUser && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                    className="nb-account-menu"
+                  >
+                    <div className="nb-account-header">
+                      <div className="nb-account-avatar-lg">{initials}</div>
+                      <div className="nb-account-info">
+                        <div className="nb-account-name">{displayName}</div>
+                        {displayContact && <div className="nb-account-contact">{displayContact}</div>}
+                      </div>
+                    </div>
+                    <div className="nb-account-divider" />
+                    <button
+                      className="nb-account-item"
+                      onClick={() => { setAccountMenuOpen(false); navigate('/my-account'); }}
+                    >
+                      <UserIcon size={15} strokeWidth={1.6} />
+                      <span>My Account</span>
+                    </button>
+                    <button
+                      className="nb-account-item"
+                      onClick={() => { setAccountMenuOpen(false); navigate('/orders'); }}
+                    >
+                      <Package size={15} strokeWidth={1.6} />
+                      <span>My Orders</span>
+                    </button>
+                    <div className="nb-account-divider" />
+                    <button
+                      className="nb-account-item nb-account-item-danger"
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={15} strokeWidth={1.6} />
+                      <span>Log Out</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             <button className="nb-icon-btn" aria-label="Open wishlist" onClick={() => setWishlistOpen(true)}>
               <Star size={18} strokeWidth={1.5} />

@@ -13,6 +13,9 @@ import Checkout from './pages/Checkout.tsx'
 import Campaigns from './pages/Campaigns.tsx'
 import ClientServices from './pages/ClientServices.tsx'
 import SizeGuide from './pages/SizeGuide.tsx'
+import Orders from './pages/Orders.tsx'
+import OrderTracking from './pages/OrderTracking.tsx'
+import MyAccount from './pages/MyAccount.tsx'
 import PageWrapper from './components/PageWrapper.tsx'
 import { useStorefrontTracker } from './lib/storefrontTracker';
 
@@ -36,6 +39,11 @@ export default function AppRoutes() {
         <Route path="/campaigns" element={<PageWrapper><Campaigns /></PageWrapper>} />
         <Route path="/services" element={<PageWrapper><ClientServices /></PageWrapper>} />
         <Route path="/size-guide" element={<PageWrapper><SizeGuide /></PageWrapper>} />
+        {/* Customer order tracking — list page + per-order timeline */}
+        <Route path="/orders" element={<PageWrapper><Orders /></PageWrapper>} />
+        <Route path="/orders/:id" element={<PageWrapper><OrderTracking /></PageWrapper>} />
+        {/* Logged-in profile dashboard */}
+        <Route path="/my-account" element={<PageWrapper><MyAccount /></PageWrapper>} />
       </Routes>
     </AnimatePresence>
   );

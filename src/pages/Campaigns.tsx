@@ -53,7 +53,7 @@ export default function Campaigns() {
   }, []);
 
   return (
-    <div ref={containerRef} style={{ background: '#030303', minHeight: '300vh', color: '#fff', overflow: 'hidden', position: 'relative' }}>
+    <div ref={containerRef} className="dvsk-page-campaigns" style={{ background: '#030303', minHeight: '300vh', color: '#fff', overflow: 'hidden', position: 'relative' }}>
       
       {/* Return Button */}
       <button 
@@ -152,6 +152,28 @@ export default function Campaigns() {
         ))}
       </div>
 
+      {/* Mobile-only Campaigns tweaks. Desktop unchanged. */}
+      <style>{`
+        @media (max-width: 768px) {
+          .dvsk-page-campaigns h1 { font-size: clamp(2.6rem, 14vw, 6rem) !important; }
+          .dvsk-page-campaigns h2 { font-size: clamp(1.8rem, 8vw, 3rem) !important; }
+          .dvsk-page-campaigns p { font-size: 13px !important; line-height: 1.6 !important; }
+          .dvsk-page-campaigns > div:nth-child(4) > div {
+            min-height: 80vh !important;
+            padding: 40px 0 !important;
+          }
+          .dvsk-page-campaigns > div:nth-child(4) > div > div {
+            flex-direction: column !important;
+            gap: 24px !important;
+            padding: 0 24px !important;
+          }
+          .dvsk-page-campaigns img { max-height: 60vh !important; }
+        }
+        @media (max-width: 480px) {
+          .dvsk-page-campaigns > div:nth-child(4) > div > div { padding: 0 18px !important; }
+          .dvsk-page-campaigns h1 span { font-size: 11px !important; letter-spacing: 0.3em !important; }
+        }
+      `}</style>
     </div>
   );
 }

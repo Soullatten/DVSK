@@ -39,6 +39,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 
            {/* Sidebar Drawer */}
            <motion.div
+              className="dvsk-cart-drawer"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
@@ -243,6 +244,32 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                     Taxes, shipping and discounts codes calculated at checkout.
                   </p>
                </div>
+
+              {/* Mobile-only padding/sizing overrides — targets the existing
+                  inline styles via structural selectors so we don't have to
+                  thread classNames through every element. */}
+              <style>{`
+                @media (max-width: 640px) {
+                  .dvsk-cart-drawer { max-width: 100% !important; }
+                  .dvsk-cart-drawer > div:first-child { padding: 24px 20px 16px !important; }
+                  .dvsk-cart-drawer > div:first-child h2 { font-size: 28px !important; }
+                  .dvsk-cart-drawer > div:nth-child(2) { padding: 0 20px !important; }
+                  .dvsk-cart-drawer > div:last-child { padding: 20px !important; }
+                  .dvsk-cart-drawer img { object-position: center !important; }
+                  .dvsk-cart-drawer button { font-size: 12px !important; }
+                  /* Smaller item thumbnail on phone */
+                  .dvsk-cart-drawer > div:nth-child(2) > div > div > div:first-child {
+                    width: 88px !important;
+                    height: 116px !important;
+                  }
+                }
+                @media (max-width: 380px) {
+                  .dvsk-cart-drawer > div:first-child h2 { font-size: 24px !important; }
+                  .dvsk-cart-drawer > div:first-child { padding: 20px 16px 14px !important; }
+                  .dvsk-cart-drawer > div:nth-child(2) { padding: 0 16px !important; }
+                  .dvsk-cart-drawer > div:last-child { padding: 16px !important; }
+                }
+              `}</style>
             </motion.div>
          </>
        )}

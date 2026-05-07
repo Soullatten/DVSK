@@ -300,6 +300,9 @@ export default function Accessories() {
             top: 0 !important;
           }
         }
+        @media (max-width: 640px) {
+          .filter-sidebar { padding: 20px !important; }
+        }
       `}</style>
     </div>
   );

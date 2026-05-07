@@ -24,6 +24,25 @@ const envSchema = z.object({
   // Groq API key for Navya AI assistant (admin panel)
   GROQ_API_KEY: z.string().optional(),
 
+  // ── Email (Brevo SMTP) ──
+  // All optional: if SMTP_USER is empty the email service runs in MOCK mode —
+  // sends are logged to console + EmailLog with status="mocked" so the admin
+  // UI flow can be exercised end-to-end before real Brevo creds are wired in.
+  SMTP_HOST: z.string().default("smtp-relay.brevo.com"),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM_EMAIL: z.string().default("nexoraai10@gmail.com"),
+  SMTP_FROM_NAME: z.string().default("DVSK"),
+  // When true, ALL outgoing emails are redirected to EMAIL_TEST_RECIPIENT
+  // regardless of who the real recipient is. Use this in dev so customers
+  // never accidentally receive test sends.
+  EMAIL_TEST_MODE: z
+    .string()
+    .default("true")
+    .transform((v) => v.toLowerCase() === "true"),
+  EMAIL_TEST_RECIPIENT: z.string().default("nexoraai10@gmail.com"),
+
   // Main frontend URL – still useful for emails, redirects, etc.
   FRONTEND_URL: z.string().default("http://localhost:5173"),
 

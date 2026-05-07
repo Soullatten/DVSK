@@ -180,6 +180,13 @@ export async function updatePurchaseOrder(id: string, data: any) {
   if (data.lng !== undefined) update.lng = data.lng;
   if (data.notes !== undefined) update.notes = data.notes;
   if (data.progress !== undefined) update.progress = data.progress;
+  // Shipment details — empty strings collapse to null so the admin can
+  // clear a previously-set value by submitting an empty input.
+  if (data.carrier !== undefined) update.carrier = data.carrier || null;
+  if (data.trackingNumber !== undefined) update.trackingNumber = data.trackingNumber || null;
+  if (data.dispatchedAt !== undefined) update.dispatchedAt = data.dispatchedAt ? new Date(data.dispatchedAt) : null;
+  if (data.weight !== undefined) update.weight = data.weight || null;
+  if (data.shipmentNotes !== undefined) update.shipmentNotes = data.shipmentNotes || null;
 
   if (Array.isArray(data.lineItems)) {
     return prisma.$transaction(async (tx) => {

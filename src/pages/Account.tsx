@@ -2,7 +2,6 @@
 
 import PixelBlast from "../components/PixelBlast"
 import MetallicPaint from "../components/MetallicPaint"
-import { useGoogleLogin } from "@react-oauth/google"
 import BorderGlow from "../components/BorderGlow"
 import { useState, useRef } from "react"
 
@@ -16,19 +15,87 @@ import logo from '../assets/logo.svg'
 // ──── Authentication ──────────────────────────────────────────────────────────────
 
 import { auth } from "../firebase"
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth"
+import {
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  signInWithPopup,
+  GoogleAuthProvider,
+} from "firebase/auth"
 import type { ConfirmationResult } from "firebase/auth"
+import { authApi } from "../api/auth"
 
-function CustomGoogleButton() {
-  const login = useGoogleLogin({
-    onSuccess: (response) => console.log('Logged in!', response),
-    onError: () => console.log('Login Failed'),
-  })
+// Shared post-auth sync — after Firebase auth succeeds (Google or phone),
+// call the backend to upsert the user in our DB so admin's Customer
+// Database sees them with email/phone/avatar populated. Backend reads
+// these from the verified Firebase token, so we don't have to re-send them.
+async function syncUserToBackend() {
+  try {
+    const user = auth.currentUser
+    if (!user) return
+    const token = await user.getIdToken()
+    await authApi.login(token).catch(async () => {
+      // First-time login → register instead. Backend's
+      // verifyAndGetUser handles both, but the explicit /register
+      // path returns a clearer 201 response.
+      await authApi.register(token, user.displayName || undefined)
+    })
+  } catch (err) {
+    // Don't block navigation on backend sync failure — user is still
+    // authenticated client-side; the next API call will retry.
+    console.warn("Backend user sync failed:", err)
+  }
+}
+
+function CustomGoogleButton({ onSuccess }: { onSuccess: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const handleClick = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const provider = new GoogleAuthProvider()
+      provider.addScope("profile")
+      provider.addScope("email")
+      // Tell Google to always show the account picker so the user can
+      // explicitly choose which account they want, even if they're
+      // already signed into Google in this browser.
+      provider.setCustomParameters({ prompt: "select_account" })
+
+      // signInWithPopup waits for the Google OAuth popup to complete and
+      // signs the user into Firebase in one shot.
+      const result = await signInWithPopup(auth, provider)
+
+      if (result?.user) {
+        // Backend sync is fire-and-forget — we DON'T block navigation
+        // on it because if the backend is briefly down or the auth/login
+        // endpoint hiccups, the user is still authenticated client-side
+        // and should see the logged-in UI immediately. Their record
+        // gets created on the next authenticated API call.
+        void syncUserToBackend()
+        onSuccess()
+      }
+    } catch (err: any) {
+      // Surface a real error message instead of silently swallowing —
+      // that was why "the popup closes and nothing happens" before.
+      if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") {
+        // User intentionally closed the popup — silent.
+        return
+      }
+      let msg = err?.message || "Google sign-in failed. Please try again."
+      if (err?.code === "auth/popup-blocked") msg = "Popup was blocked. Please allow popups and try again."
+      if (err?.code === "auth/unauthorized-domain") msg = "This domain isn't allowed. Add it to Firebase Auth → Authorized Domains."
+      if (err?.code === "auth/account-exists-with-different-credential") msg = "An account already exists with a different sign-in method. Try Phone OTP or email."
+      console.error("Google sign-in failed:", err)
+      alert(msg)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <button
-      onClick={() => login()}
-      className="flex items-center justify-center gap-3 px-4 py-3 bg-transparent rounded-lg w-full"
+      onClick={handleClick}
+      disabled={busy}
+      className="flex items-center justify-center gap-3 px-4 py-3 bg-transparent rounded-lg w-full disabled:opacity-50"
     >
       <svg width="20" height="20" viewBox="0 0 48 48">
         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -36,7 +103,7 @@ function CustomGoogleButton() {
         <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
       </svg>
-      <span className="text-white text-sm font-medium">Google</span>
+      <span className="text-white text-sm font-medium">{busy ? "Signing in…" : "Google"}</span>
     </button>
   )
 }
@@ -76,7 +143,7 @@ function LoginForm({ onRegister, onPhoneClick }: { onRegister: () => void, onPho
       <div className="flex gap-3 w-full max-w-sm mb-4" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
         <div className="flex-1">
           <BorderGlow edgeSensitivity={30} glowColor="45 10 110" backgroundColor="#060010" borderRadius={12} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#6d28d9', '#a21caf', '#8B2BE2', '#9333ea']}>
-            <CustomGoogleButton />
+            <CustomGoogleButton onSuccess={() => navigate('/home')} />
           </BorderGlow>
         </div>
         <div className="flex-1">
@@ -93,15 +160,15 @@ function LoginForm({ onRegister, onPhoneClick }: { onRegister: () => void, onPho
       </div>
 
       <div className="flex flex-col gap-3 max-w-sm" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
-        <input type="email" placeholder="Email" className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors" />
+        <input type="email" placeholder="Email" className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#ffebab]/60 transition-colors" />
 
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
             placeholder="Password"
-            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors pr-10"
+            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#ffebab]/60 transition-colors pr-10"
           />
-          <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-purple-400 transition-colors">
+          <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-[#ffebab] transition-colors">
             {showPassword ? (
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
@@ -115,20 +182,20 @@ function LoginForm({ onRegister, onPhoneClick }: { onRegister: () => void, onPho
           </button>
         </div>
 
-        <button onClick={() => navigate('/home')} className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors">
+        <button onClick={() => navigate('/home')} className="w-full py-3 bg-[#ffebab] hover:bg-[#ffe199] text-black text-sm font-semibold rounded-lg transition-colors">
           Continue
         </button>
 
         <div className="flex items-center justify-center gap-1 mt-1">
           <span className="text-white/30 text-xs">Forgot your password?</span>
-          <a href="#" className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">Reset Your Password</a>
+          <a href="#" className="text-white/50 text-xs underline hover:text-[#ffebab] transition-colors">Reset Your Password</a>
         </div>
 
         <div className="h-px bg-white/10" />
 
         <div className="flex items-center justify-center gap-1">
           <span className="text-white/30 text-xs">Don't have an account?</span>
-          <button onClick={onRegister} className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">Register</button>
+          <button onClick={onRegister} className="text-white/50 text-xs underline hover:text-[#ffebab] transition-colors">Register</button>
         </div>
       </div>
     </>
@@ -176,6 +243,10 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
     try {
       setLoading(true)
       await confirmationRef.current?.confirm(otp)
+      // Same shared sync as the Google button — pushes the new phone-only
+      // user into our backend DB so they show up in the admin Customer
+      // Database with their phone number on file.
+      await syncUserToBackend()
       navigate('/home')
     } catch (err: any) {
       setError('Invalid OTP. Please try again.')
@@ -223,7 +294,7 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
             value={phone}
             onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
             disabled={otpSent}
-            className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#ffebab]/60 transition-colors disabled:opacity-50"
           />
         </div>
 
@@ -234,7 +305,7 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
             value={otp}
             maxLength={6}
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors tracking-widest"
+            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#ffebab]/60 transition-colors tracking-widest"
           />
         )}
 
@@ -242,7 +313,7 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
           <button
             onClick={handleSendOtp}
             disabled={loading}
-            className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+            className="w-full py-3 bg-[#ffebab] hover:bg-[#ffe199] disabled:opacity-50 disabled:cursor-not-allowed text-black text-sm font-semibold rounded-lg transition-colors"
           >
             {loading ? 'Sending...' : 'Send OTP'}
           </button>
@@ -250,7 +321,7 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
           <button
             onClick={handleVerifyOtp}
             disabled={loading}
-            className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+            className="w-full py-3 bg-[#ffebab] hover:bg-[#ffe199] disabled:opacity-50 disabled:cursor-not-allowed text-black text-sm font-semibold rounded-lg transition-colors"
           >
             {loading ? 'Verifying...' : 'Verify & Continue'}
           </button>
@@ -258,7 +329,7 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
 
         {otpSent && (
           <div className="flex items-center justify-center">
-            <button onClick={handleResend} className="text-white/30 text-xs hover:text-purple-400 transition-colors">
+            <button onClick={handleResend} className="text-white/30 text-xs hover:text-[#ffebab] transition-colors">
               Resend OTP
             </button>
           </div>
@@ -267,7 +338,7 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
         <div className="h-px bg-white/10" />
 
         <div className="flex items-center justify-center">
-          <button onClick={onBack} className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">
+          <button onClick={onBack} className="text-white/50 text-xs underline hover:text-[#ffebab] transition-colors">
             ← Back to Login
           </button>
         </div>
@@ -295,7 +366,7 @@ function RegisterForm({ onLogin }: { onLogin: () => void }) {
       <div className="flex gap-3 w-full max-w-sm mb-4" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
         <div className="flex-1">
           <BorderGlow edgeSensitivity={30} glowColor="45 10 110" backgroundColor="#060010" borderRadius={12} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#6d28d9', '#a21caf', '#8B2BE2', '#9333ea']}>
-            <CustomGoogleButton />
+            <CustomGoogleButton onSuccess={() => navigate('/home')} />
           </BorderGlow>
         </div>
       </div>
@@ -308,19 +379,19 @@ function RegisterForm({ onLogin }: { onLogin: () => void }) {
 
       <div className="flex flex-col gap-3 max-w-sm" style={{ marginLeft: '20px', fontFamily: 'DM Sans' }}>
         <div className="flex gap-2">
-          <input type="text" placeholder="First name" className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors" />
-          <input type="text" placeholder="Last name" className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors" />
+          <input type="text" placeholder="First name" className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#ffebab]/60 transition-colors" />
+          <input type="text" placeholder="Last name" className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#ffebab]/60 transition-colors" />
         </div>
 
-        <input type="email" placeholder="Email" className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors" />
+        <input type="email" placeholder="Email" className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#ffebab]/60 transition-colors" />
 
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
             placeholder="Password"
-            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors pr-10"
+            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#ffebab]/60 transition-colors pr-10"
           />
-          <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-purple-400 transition-colors">
+          <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-[#ffebab] transition-colors">
             {showPassword ? (
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
             ) : (
@@ -333,9 +404,9 @@ function RegisterForm({ onLogin }: { onLogin: () => void }) {
           <input
             type={showConfirm ? "text" : "password"}
             placeholder="Confirm password"
-            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500 transition-colors pr-10"
+            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#ffebab]/60 transition-colors pr-10"
           />
-          <button onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-purple-400 transition-colors">
+          <button onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-[#ffebab] transition-colors">
             {showConfirm ? (
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
             ) : (
@@ -344,7 +415,7 @@ function RegisterForm({ onLogin }: { onLogin: () => void }) {
           </button>
         </div>
 
-        <button onClick={() => navigate('/home')} className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors">
+        <button onClick={() => navigate('/home')} className="w-full py-3 bg-[#ffebab] hover:bg-[#ffe199] text-black text-sm font-semibold rounded-lg transition-colors">
           Create Account
         </button>
 
@@ -352,7 +423,7 @@ function RegisterForm({ onLogin }: { onLogin: () => void }) {
 
         <div className="flex items-center justify-center gap-1">
           <span className="text-white/30 text-xs">Already have an account?</span>
-          <button onClick={onLogin} className="text-white/50 text-xs underline hover:text-purple-400 transition-colors">Log In</button>
+          <button onClick={onLogin} className="text-white/50 text-xs underline hover:text-[#ffebab] transition-colors">Log In</button>
         </div>
       </div>
     </>
@@ -389,7 +460,7 @@ export default function App() {
           <MetallicPaint imageSrc={logo} seed={42} scale={2} patternSharpness={0.2} noiseScale={2.5} speed={0.45} liquid={0.25} mouseAnimation={false} brightness={2.45} contrast={0.52} refraction={0.02} blur={0.05} chromaticSpread={1} fresnel={1} angle={1} waveAmplitude={1} distortion={1} contour={0.2} lightColor="#3D0080" darkColor="#000000" tintColor="#8B2BE2" />
         </div>
 
-        <div className="flex flex-col flex-1 px-10 md:px-16" style={{ marginTop: '1px' }}>
+        <div className="flex flex-col flex-1 px-6 sm:px-10 md:px-16" style={{ marginTop: '1px' }}>
           {view === 'login' && <LoginForm onRegister={() => setView('register')} onPhoneClick={() => setView('phone')} />}
           {view === 'register' && <RegisterForm onLogin={() => setView('login')} />}
           {view === 'phone' && <PhoneForm onBack={() => setView('login')} />}

@@ -2,7 +2,7 @@ import { prisma } from "../../config/database.js";
 import { generateOrderNumber } from "../../utils/helpers.js";
 import { getPagination, paginationMeta } from "../../utils/pagination.js";
 import { clearCart, applyCoupon } from "../cart/cart.service.js";
-import { geocodeCityAsync } from "../../realtime/events.js";
+import { geocodeCityAsync, LiveEvents } from "../../realtime/events.js";
 import type { Prisma } from "@prisma/client";
 
 const FREE_SHIPPING_THRESHOLD = 2500;
@@ -257,7 +257,7 @@ export async function getOrderByIdAdmin(orderId: string) {
 }
 
 export async function updateOrderStatus(orderId: string, status: string, adminNotes?: string) {
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId }, include: { items: true } });
     if (!order) throw new Error("Order not found");
 
@@ -280,13 +280,45 @@ export async function updateOrderStatus(orderId: string, status: string, adminNo
       include: { items: true, payment: true },
     });
   });
+
+  // Push real-time event so the customer's order tracking page (and admin
+  // dashboards) update without a manual refresh. Done AFTER the transaction
+  // commits so subscribers querying for the new state see it.
+  LiveEvents.orderStatusUpdated({
+    orderId: updated.id,
+    orderNumber: updated.orderNumber,
+    userId: updated.userId,
+    status: updated.status as string,
+    adminNotes: updated.adminNotes,
+  });
+
+  return updated;
 }
 
 export async function updateTracking(orderId: string, shippingProvider: string, trackingNumber: string) {
-  return prisma.order.update({
+  const updated = await prisma.order.update({
     where: { id: orderId },
     data: { shippingProvider, trackingNumber, status: "SHIPPED" },
   });
+
+  // Notify subscribers — status changed (→ SHIPPED) AND new tracking info
+  // is available, so fire both events.
+  LiveEvents.orderTrackingUpdated({
+    orderId: updated.id,
+    orderNumber: updated.orderNumber,
+    userId: updated.userId,
+    shippingProvider,
+    trackingNumber,
+  });
+  LiveEvents.orderStatusUpdated({
+    orderId: updated.id,
+    orderNumber: updated.orderNumber,
+    userId: updated.userId,
+    status: updated.status as string,
+    adminNotes: updated.adminNotes,
+  });
+
+  return updated;
 }
 
 function formatRelativeTime(date: Date): string {

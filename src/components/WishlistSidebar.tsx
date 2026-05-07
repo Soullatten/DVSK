@@ -39,6 +39,7 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
 
           {/* Sidebar Drawer */}
           <motion.div
+            className="dvsk-wishlist-drawer"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -155,6 +156,23 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
               </AnimatePresence>
             </div>
 
+            <style>{`
+              @media (max-width: 640px) {
+                .dvsk-wishlist-drawer { max-width: 100% !important; }
+                .dvsk-wishlist-drawer > div:first-child { padding: 24px 20px 16px !important; }
+                .dvsk-wishlist-drawer > div:first-child h2 { font-size: 28px !important; }
+                .dvsk-wishlist-drawer > div:nth-child(2) { padding: 24px 20px !important; }
+                .dvsk-wishlist-drawer > div:nth-child(2) > div > div > div:first-child {
+                  width: 100px !important;
+                  height: 132px !important;
+                }
+              }
+              @media (max-width: 380px) {
+                .dvsk-wishlist-drawer > div:first-child h2 { font-size: 24px !important; }
+                .dvsk-wishlist-drawer > div:first-child { padding: 20px 16px 14px !important; }
+                .dvsk-wishlist-drawer > div:nth-child(2) { padding: 20px 16px !important; }
+              }
+            `}</style>
           </motion.div>
         </>
       )}

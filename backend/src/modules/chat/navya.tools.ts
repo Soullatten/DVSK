@@ -158,6 +158,28 @@ export const NAVYA_TOOLS = [
   {
     type: "function",
     function: {
+      name: "send_order_email",
+      description:
+        "Send a templated email to the customer of a specific order. Use templateKey 'order-confirmation' for order receipts, 'order-tracking' for shipping notifications, or 'new-drop' for marketing. Variables auto-fill from the order's live data; pass subjectOverride or extraVariables only if the user explicitly asked for custom wording.",
+      parameters: {
+        type: "object",
+        properties: {
+          orderId: { type: "string", description: "The order's cuid id OR its order number (e.g. DVSK-1024)." },
+          templateKey: { type: "string", enum: ["order-confirmation", "order-tracking", "new-drop"] },
+          subjectOverride: { type: "string", description: "Optional custom subject. Supports {{orderNumber}} etc." },
+          extraVariables: {
+            type: "object",
+            description:
+              "Optional overrides merged on top of the auto-resolved order variables (e.g. trackingNumber, courier).",
+          },
+        },
+        required: ["orderId", "templateKey"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "create_discount_coupon",
       description: "Create a new discount coupon code that customers can apply at checkout.",
       parameters: {
@@ -541,6 +563,39 @@ export async function executeNavyaTool(name: string, args: any): Promise<any> {
         select: { id: true, orderNumber: true, status: true },
       });
       return { ok: true, order };
+    }
+
+    case "send_order_email": {
+      const { orderId, templateKey, subjectOverride, extraVariables } = args || {};
+      if (!orderId || !templateKey) throw new Error("orderId + templateKey required");
+      const { sendEmail, buildOrderTemplateVars } = await import("../email/email.service.js");
+      // Allow Navya to be passed either the cuid id or the order number ("DVSK-1024")
+      const order = await prisma.order.findFirst({
+        where: { OR: [{ id: orderId }, { orderNumber: orderId }] },
+        include: { user: true },
+      });
+      if (!order) return { ok: false, error: `Order not found: ${orderId}` };
+      if (!order.user?.email) return { ok: false, error: "Order has no customer email on file" };
+
+      const variables = await buildOrderTemplateVars(order.id, templateKey, extraVariables || {});
+      const result = await sendEmail({
+        templateKey,
+        variables,
+        toEmail: order.user.email,
+        subjectOverride,
+        orderId: order.id,
+        userId: order.userId,
+        triggeredBy: "navya",
+      });
+      return {
+        ok: result.ok,
+        status: result.status,
+        emailLogId: result.emailLogId,
+        sentTo: result.finalRecipient,
+        wasTestRedirect: result.wasTestRedirect,
+        wasMocked: result.wasMocked,
+        error: result.errorMessage,
+      };
     }
 
     case "create_discount_coupon": {

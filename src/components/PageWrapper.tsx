@@ -1,4 +1,4 @@
-import React, { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect } from "react";
 import { motion } from "framer-motion";
 
 interface Props {
@@ -13,12 +13,12 @@ export default function PageWrapper({ children }: Props) {
 
   return (
     <>
-      {/* 
+      {/*
         THE REVEAL (Entering)
         Fired when the new page is loaded.
         A solid black block pulling upwards into a liquid bell-curve, snapping off the top of the screen.
       */}
-      <motion.svg 
+      <motion.svg
         style={{ position: "fixed", pointerEvents: "none", zIndex: 10001, width: "100vw", height: "100vh", top: 0, left: 0 }}
         viewBox="0 0 100 100" preserveAspectRatio="none"
         initial={{ opacity: 1 }}
@@ -38,13 +38,13 @@ export default function PageWrapper({ children }: Props) {
             </div>
         </motion.foreignObject>
 
-        <motion.path 
+        <motion.path
           initial={{ d: "M 0 0 L 100 0 L 100 100 Q 50 100 0 100 Z" }}
           animate={{
             d: [
-              "M 0 0 L 100 0 L 100 100 Q 50 100 0 100 Z",  
-              "M 0 0 L 100 0 L 100 50 Q 50 120 0 50 Z",    
-              "M 0 0 L 100 0 L 100 0 Q 50 0 0 0 Z"         
+              "M 0 0 L 100 0 L 100 100 Q 50 100 0 100 Z",
+              "M 0 0 L 100 0 L 100 50 Q 50 120 0 50 Z",
+              "M 0 0 L 100 0 L 100 0 Q 50 0 0 0 Z"
             ],
             transition: { duration: 1.1, ease: [0.85, 0, 0.15, 1], delay: 0.1 }
           }}
@@ -53,12 +53,12 @@ export default function PageWrapper({ children }: Props) {
         />
       </motion.svg>
 
-      {/* 
+      {/*
         THE ENVELOPE (Exiting)
         Fired when leaving the active page.
         A liquid bell curve shooting up from the bottom of the screen to crash down and cover it.
       */}
-      <motion.svg 
+      <motion.svg
         style={{ position: "fixed", pointerEvents: "none", zIndex: 10000, width: "100vw", height: "100vh", top: 0, left: 0 }}
         viewBox="0 0 100 100" preserveAspectRatio="none"
         initial={{ opacity: 0 }}
@@ -66,13 +66,13 @@ export default function PageWrapper({ children }: Props) {
         exit={{ opacity: 1, transition: { duration: 0 } }}
       >
         {/* Layer 1: Luxury Dark Violet Wave */}
-        <motion.path 
+        <motion.path
           initial={{ d: "M 0 100 Q 50 100 100 100 L 100 100 L 0 100 Z" }}
           animate={{ d: "M 0 100 Q 50 100 100 100 L 100 100 L 0 100 Z" }}
           exit={{
             d: [
-              "M 0 100 Q 50 100 100 100 L 100 100 L 0 100 Z", 
-              "M 0 60 Q 50 -10 100 60 L 100 100 L 0 100 Z", 
+              "M 0 100 Q 50 100 100 100 L 100 100 L 0 100 Z",
+              "M 0 60 Q 50 -10 100 60 L 100 100 L 0 100 Z",
               "M 0 0 Q 50 0 100 0 L 100 100 L 0 100 Z"
             ],
             transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1], delay: 0 }
@@ -80,13 +80,13 @@ export default function PageWrapper({ children }: Props) {
           fill="#2D0060"
         />
         {/* Layer 2: Blackout Void Wave */}
-        <motion.path 
+        <motion.path
           initial={{ d: "M 0 100 Q 50 100 100 100 L 100 100 L 0 100 Z" }}
           animate={{ d: "M 0 100 Q 50 100 100 100 L 100 100 L 0 100 Z" }}
           exit={{
             d: [
-              "M 0 100 Q 50 100 100 100 L 100 100 L 0 100 Z", 
-              "M 0 60 Q 50 -10 100 60 L 100 100 L 0 100 Z", 
+              "M 0 100 Q 50 100 100 100 L 100 100 L 0 100 Z",
+              "M 0 60 Q 50 -10 100 60 L 100 100 L 0 100 Z",
               "M 0 0 Q 50 0 100 0 L 100 100 L 0 100 Z"
             ],
             transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1], delay: 0.1 }

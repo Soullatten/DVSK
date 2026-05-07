@@ -152,6 +152,31 @@ export const LiveEvents = {
     emitLiveEvent("order:paid", { ...payload, ts: Date.now() });
   },
 
+  // Fired when admin updates an order's status from the admin panel.
+  // The storefront's order tracking page subscribes to these events to
+  // update the timeline in real-time without requiring a page refresh.
+  orderStatusUpdated(payload: {
+    orderId: string;
+    orderNumber: string;
+    userId: string;
+    status: string;
+    adminNotes?: string | null;
+  }) {
+    emitLiveEvent("order:status:updated", { ...payload, ts: Date.now() });
+  },
+
+  // Fired when admin sets/updates the shipping provider + tracking number.
+  // Triggers the storefront tracking timeline to show shipping info.
+  orderTrackingUpdated(payload: {
+    orderId: string;
+    orderNumber: string;
+    userId: string;
+    shippingProvider: string;
+    trackingNumber: string;
+  }) {
+    emitLiveEvent("order:tracking:updated", { ...payload, ts: Date.now() });
+  },
+
   inventoryLow(payload: { sku: string; productName: string; stock: number }) {
     emitLiveEvent("inventory:low", { ...payload, ts: Date.now() });
   },

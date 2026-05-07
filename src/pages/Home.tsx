@@ -240,38 +240,31 @@ const GradualBlur: React.FC<GradualBlurProps> = (props) => {
 // ─────────────────────────────────────────────
 
 const COLLECTION_DATA = [
-  { text: "Tailored with absolute precision. Our garments redefine modern luxury.", image: Image2 },
-  { text: "Draped in elegance. Every silhouette is meticulously crafted for a flawless fit.", image: Image3 },
-  { text: "Tactile fabrics and fluid movement bring each collection to life.", image: Image4 },
-  { text: "Experience the perfect harmony of comfort, structure, and uncompromising quality.", image: Image2 }
+  { text: "Tailored with absolute precision. Our garments redefine modern luxury.", image: Image2, chapter: "TAILORING" },
+  { text: "Draped in elegance. Every silhouette is meticulously crafted for a flawless fit.", image: Image3, chapter: "DRAPE" },
+  { text: "Tactile fabrics and fluid movement bring each collection to life.", image: Image4, chapter: "TEXTURE" },
+  { text: "Experience the perfect harmony of comfort, structure, and uncompromising quality.", image: Image2, chapter: "HARMONY" }
 ];
 
 const ScrollTextItem: React.FC<{ text: string; index: number; onEnter: (i: number) => void }> = ({ text, index, onEnter }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= 900);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   const { scrollYProgress } = useScroll({
     target: ref,
-    offset: isMobile ? ["start 95%", "start 65%"] : ["start 85%", "start 35%"]
+    offset: ["start 85%", "start 35%"]
   });
 
-  const opacity = useTransform(scrollYProgress, [0, 1], isMobile ? [0, 1] : [0.15, 1]);
+  const opacity = useTransform(scrollYProgress, [0, 1], [0.15, 1]);
   const y = useTransform(scrollYProgress, [0, 1], [50, 0]);
   const filter = useTransform(scrollYProgress, [0, 1], ["blur(12px)", "blur(0px)"]);
 
   return (
     <motion.div
       ref={ref}
+      className="scroll-text-item"
       style={{ ...styles.scrollText, opacity, y, filter, position: "relative", zIndex: 2 } as Record<string, any>}
       onViewportEnter={() => onEnter(index)}
-      viewport={{ amount: isMobile ? 0 : 0.5, margin: isMobile ? "0px 0px -40% 0px" : "0px" }}
+      viewport={{ amount: 0.5, margin: "0px" }}
     >
       {text}
     </motion.div>
@@ -341,6 +334,16 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const [zoomedCategory, setZoomedCategory] = useState<string | null>(null);
   const [activeScrollIndex, setActiveScrollIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Track mobile viewport so we can swap Section 2's layout. Mirrors the
+  // pattern used in ScrollTextItem above.
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 900);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const handleCategoryClick = (id: string) => {
     if (zoomedCategory) return;
@@ -357,6 +360,53 @@ const Home: React.FC = () => {
 
   const imageScale = useTransform(sectionY, [0, 1], [1, 1.2]);
   const indicatorHeight = useTransform(sectionY, [0, 1], ["0%", "100%"]);
+  // These transforms power the desktop-only parallax watermark + spinning
+  // stars in Section 2's right column. They MUST be declared at the top of
+  // Home (not inline in JSX) so React's hook order stays stable when the
+  // desktop block is conditionally hidden on mobile via {!isMobile && ...}.
+  const watermarkY = useTransform(sectionY, [0, 1], [600, -800]);
+  const star1Rotate = useTransform(sectionY, [0, 1], [0, 180]);
+  const star1Y = useTransform(sectionY, [0, 1], [300, -400]);
+  const star2Rotate = useTransform(sectionY, [0, 1], [180, 0]);
+  const star2Y = useTransform(sectionY, [0, 1], [100, -500]);
+
+  // ── Mobile-only scroll-driven state (single useEffect, no framer hooks).
+  // Drives the active index + 4 segment fills for the pinned-hero panel.
+  const [mobileSegFills, setMobileSegFills] = useState<[number, number, number, number]>([0, 0, 0, 0]);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const el = section2Ref.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        // Progress: 0 when section top hits viewport top,
+        //           1 when section bottom hits viewport bottom.
+        const scrollable = el.offsetHeight - window.innerHeight;
+        const scrolled = -rect.top;
+        const p = scrollable > 0 ? Math.min(1, Math.max(0, scrolled / scrollable)) : 0;
+
+        // Discrete index across 4 quartiles.
+        const idx = Math.min(3, Math.floor(p * 4));
+        setActiveScrollIndex((prev) => (prev === idx ? prev : idx));
+
+        // Per-segment fill (0..1 for each quartile).
+        const seg = (start: number) => Math.min(1, Math.max(0, (p - start) * 4));
+        setMobileSegFills([seg(0), seg(0.25), seg(0.5), seg(0.75)]);
+      });
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [isMobile]);
 
 
   useEffect(() => {
@@ -403,8 +453,9 @@ const Home: React.FC = () => {
         <div style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", overflow: "hidden" }}>
 
           {/* Bottom Left Glass Info Card */}
-          <div style={{ position: "absolute", bottom: "15%", left: "clamp(20px, 4vw, 56px)", width: "100%" }}>
+          <div className="hero-glass-card-wrap" style={{ position: "absolute", bottom: "15%", left: "clamp(20px, 4vw, 56px)", right: "clamp(20px, 4vw, 56px)" }}>
             <motion.div
+              className="hero-glass-card"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 1.2, delay: 0.8, ease: "easeOut" }}
@@ -422,10 +473,10 @@ const Home: React.FC = () => {
                 willChange: "transform, opacity"
               }}
             >
-              <p style={{ fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "0.25em", color: "#ffebab", textTransform: "uppercase", marginBottom: "12px", margin: 0 }}>Collection FW/26</p>
-              <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "32px", color: "white", margin: "12px 0", lineHeight: 1.1 }}>Elegance<br />Redefined</p>
+              <p className="hero-glass-eyebrow" style={{ fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "0.25em", color: "#ffebab", textTransform: "uppercase", marginBottom: "12px", margin: 0 }}>Collection FW/26</p>
+              <p className="hero-glass-title" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "32px", color: "white", margin: "12px 0", lineHeight: 1.1 }}>Elegance<br />Redefined</p>
               <div style={{ width: "40px", height: "1px", background: "rgba(255,255,255,0.3)", marginBottom: "16px" }} />
-              <p style={{ fontFamily: "'Jost', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.6)", margin: 0, lineHeight: 1.6, fontWeight: 300 }}>Experience the perfect harmony of comfort, structure, and uncompromising quality draped in darkness.</p>
+              <p className="hero-glass-body" style={{ fontFamily: "'Jost', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.6)", margin: 0, lineHeight: 1.6, fontWeight: 300 }}>Experience the perfect harmony of comfort, structure, and uncompromising quality draped in darkness.</p>
             </motion.div>
           </div>
         </div>
@@ -456,9 +507,16 @@ const Home: React.FC = () => {
         <CurvedLoop marqueeText="DVSK ✦" />
       </div>
 
-      {/* ── Section 2 ── */}
+      {/* ── Section 2 ──
+          Desktop: original sticky-image + scrolling-text parallax (≥901 px).
+          Mobile: a single pinned-hero panel that drives all four story
+          transitions from the section's continuous scroll progress (≤900 px).
+          Section is taller on mobile (400 vh) so each story gets one viewport
+          of scroll travel. Desktop still uses minHeight: 100vh from the
+          inline style — mobile overrides via CSS below. */}
       <section style={{ ...styles.section2, position: "relative" }} ref={section2Ref} className="section2-container">
 
+        {!isMobile && <>
         {/* LEFT IMAGE & INDICATOR */}
         <div style={styles.leftWrapperOuter} className="section2-left-outer">
 
@@ -522,7 +580,7 @@ const Home: React.FC = () => {
               whiteSpace: "nowrap",
               originX: 0.5, originY: 0.5,
               rotate: 90,
-              y: useTransform(sectionY, [0, 1], [600, -800])
+              y: watermarkY
             } as Record<string, any>}>
               DVSK
             </motion.div>
@@ -534,8 +592,8 @@ const Home: React.FC = () => {
               left: "10%",
               fontSize: "180px",
               color: "rgba(255,255,255,0.04)",
-              rotate: useTransform(sectionY, [0, 1], [0, 180]),
-              y: useTransform(sectionY, [0, 1], [300, -400])
+              rotate: star1Rotate,
+              y: star1Y
             } as Record<string, any>}>
               ✦
             </motion.div>
@@ -547,8 +605,8 @@ const Home: React.FC = () => {
               right: "15%",
               fontSize: "240px",
               color: "rgba(255,255,255,0.02)",
-              rotate: useTransform(sectionY, [0, 1], [180, 0]),
-              y: useTransform(sectionY, [0, 1], [100, -500])
+              rotate: star2Rotate,
+              y: star2Y
             } as Record<string, any>}>
               ✦
             </motion.div>
@@ -655,6 +713,109 @@ const Home: React.FC = () => {
             </MagneticButton>
           </div>
         </div>
+        </>}
+
+        {isMobile && (
+          <div className="section2-mobile">
+            {/* Sticky pinned wrapper — stays in viewport for the entire
+                400 vh section, so the same image card + text panel host
+                all four story transitions in place. */}
+            <div className="section2-mobile-pin">
+
+              {/* Image card — all 4 images stacked. Each one's opacity is
+                  driven by which quartile of the scroll we're in (smooth
+                  cross-fades, not discrete pops). Overlap between images
+                  during transitions feels fluid. */}
+              <div className="section2-mobile-card">
+                {COLLECTION_DATA.map((item, i) => {
+                  // Compute opacity 0→1 around this image's quartile centre.
+                  // Distance from active centre, smoothed by cosine-like falloff.
+                  const segMid = i / 3; // 0, 0.33, 0.66, 1
+                  const allFill = mobileSegFills.reduce((a, b) => a + b, 0) / 4; // 0..1 progress
+                  const distance = Math.abs(allFill - segMid);
+                  const opacity = Math.max(0, Math.min(1, 1 - distance * 3));
+                  return (
+                    <div
+                      key={i}
+                      className="section2-mobile-card-img"
+                      style={{
+                        backgroundImage: `url(${item.image})`,
+                        opacity,
+                      }}
+                    />
+                  );
+                })}
+                <div className="section2-mobile-card-mask" aria-hidden="true" />
+              </div>
+
+              {/* Chapter pill — fades smoothly between values, no mode="wait" */}
+              <div className="section2-mobile-chapter-wrap">
+                <AnimatePresence>
+                  <motion.div
+                    key={`mob-chap-${activeScrollIndex}`}
+                    className="section2-mobile-chapter"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <span className="section2-mobile-chapter-num">
+                      {String(activeScrollIndex + 1).padStart(2, '0')}
+                    </span>
+                    <span className="section2-mobile-chapter-dot" />
+                    <span className="section2-mobile-chapter-name">
+                      {COLLECTION_DATA[activeScrollIndex].chapter}
+                    </span>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Statement text — overlapping cross-fade, blur-clear reveal */}
+              <div className="section2-mobile-text-wrap">
+                <AnimatePresence>
+                  <motion.p
+                    key={`mob-text-${activeScrollIndex}`}
+                    className="section2-mobile-text"
+                    initial={{ opacity: 0, y: 24, filter: "blur(10px)" }}
+                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, y: -16, filter: "blur(8px)" }}
+                    transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    {COLLECTION_DATA[activeScrollIndex].text}
+                  </motion.p>
+                </AnimatePresence>
+              </div>
+
+              {/* Bottom progress bar — 4 segments fill as you scroll. */}
+              <div className="section2-mobile-progress" aria-hidden="true">
+                {mobileSegFills.map((fill, i) => (
+                  <div key={i} className="section2-mobile-progress-seg">
+                    <div
+                      className="section2-mobile-progress-fill"
+                      style={{ width: `${fill * 100}%` }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA — only revealed at the final story (HARMONY).
+                  Fades in once the user has scrolled to the last quarter. */}
+              <motion.div
+                className="section2-mobile-cta"
+                animate={{
+                  opacity: activeScrollIndex === COLLECTION_DATA.length - 1 ? 1 : 0,
+                  y: activeScrollIndex === COLLECTION_DATA.length - 1 ? 0 : 16,
+                  pointerEvents: activeScrollIndex === COLLECTION_DATA.length - 1 ? 'auto' : 'none',
+                }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <MagneticButton onClick={() => navigate('/men')}>
+                  EXPLORE COLLECTION
+                </MagneticButton>
+              </motion.div>
+            </div>
+          </div>
+        )}
 
       </section>
 
@@ -722,47 +883,228 @@ const Home: React.FC = () => {
             min-height: 250px !important;
           }
         }
+        @media (max-width: 640px) {
+          /* Section 3 — categories on phone */
+          .category-box {
+            height: 36vh !important;
+            min-height: 220px !important;
+            padding: 24px !important;
+            border-radius: 14px !important;
+          }
+          .categories-container {
+            gap: 16px !important;
+          }
+        }
 
+        /* ── MOBILE Section 2: Pinned Hero Story (≤900 px) ──
+              Section becomes 400 vh tall (one viewport per story).
+              Inside, a single sticky 100 vh wrapper hosts the image card,
+              chapter label, statement text, and progress bar. Driven by one
+              continuous scroll progress that snaps to a discrete index. */
         @media (max-width: 900px) {
+          /* Section: tall scroll runway, no padding, dark base */
           .section2-container {
             display: block !important;
-            padding-top: 0 !important;
-          }
-          .section2-left-outer {
-            width: 100% !important;
             padding: 0 !important;
-            height: 100vh !important;
-            position: sticky !important;
-            top: 0 !important;
-            z-index: 10 !important; /* Forces image over text */
-          }
-          .section2-scroll-indicator {
-            display: none !important;
-          }
-          .section2-left-image-wrapper {
-            width: 100% !important;
-            height: 60vh !important;
-            top: 0 !important;
-            border-radius: 0 !important;
             position: relative !important;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
-            background-color: #080808 !important;
+            min-height: 400vh !important;
+            background: #080808 !important;
           }
-          .section2-right-content {
-            width: 100% !important;
-            padding: 100vh 20px 50vh !important; /* Start reading immediately below screen fold */
-            margin-top: -100vh !important; /* Overlap exactly under the left track */
-            z-index: 5 !important; /* Renders perfectly underneath image */
-            gap: 80vh !important;
+
+          /* Mobile wrapper must fill the full 400vh of the section so the
+             sticky pin inside has travel distance (height of parent minus
+             height of sticky child = scroll distance the pin stays pinned). */
+          .section2-mobile {
             position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 400vh;
           }
-          .section2-right-bg-elements {
-            display: none !important; 
+          .section2-mobile-pin {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8vh 22px 4vh;
+            box-sizing: border-box;
+            overflow: hidden;
           }
+
+          /* Image card — anchor of the scene. All 4 images stack here and
+             cross-fade smoothly via opacity tied to scroll progress. */
+          .section2-mobile-card {
+            position: relative;
+            width: 100%;
+            max-width: 460px;
+            height: 54vh;
+            max-height: 560px;
+            border-radius: 22px;
+            overflow: hidden;
+            background: #050505;
+            box-shadow:
+              0 40px 80px rgba(0,0,0,0.6),
+              0 0 0 1px rgba(255,255,255,0.05);
+            flex-shrink: 0;
+          }
+          .section2-mobile-card-img {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: opacity;
+          }
+          .section2-mobile-card-mask {
+            position: absolute;
+            inset: 0;
+            background:
+              linear-gradient(180deg, transparent 50%, rgba(8,8,8,0.55) 100%),
+              radial-gradient(ellipse 90% 60% at 50% 30%, transparent 0%, rgba(8,8,8,0.16) 100%);
+            pointer-events: none;
+            z-index: 3;
+          }
+
+          /* Chapter pill below image */
+          .section2-mobile-chapter-wrap {
+            position: relative;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-top: 2.6vh;
+            min-height: 26px;
+          }
+          .section2-mobile-chapter {
+            position: absolute;
+            font-family: 'Jost', sans-serif;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: rgba(255,235,171,0.92);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 16px;
+            border: 0.5px solid rgba(255,235,171,0.28);
+            border-radius: 100px;
+            background: rgba(255,235,171,0.05);
+            white-space: nowrap;
+            backdrop-filter: blur(6px);
+          }
+          .section2-mobile-chapter-num {
+            opacity: 0.7;
+            font-variant-numeric: tabular-nums;
+          }
+          .section2-mobile-chapter-dot {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: rgba(255,235,171,0.6);
+            display: inline-block;
+          }
+          .section2-mobile-chapter-name {
+            color: #ffebab;
+          }
+
+          /* Statement text */
+          .section2-mobile-text-wrap {
+            position: relative;
+            width: 100%;
+            max-width: 560px;
+            min-height: 16vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            margin-top: 3vh;
+          }
+          .section2-mobile-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            padding: 0 12px;
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 300;
+            font-size: clamp(1.55rem, 6.4vw, 2.25rem);
+            line-height: 1.22;
+            letter-spacing: -0.008em;
+            text-align: center;
+            background: linear-gradient(160deg, #ffffff 0%, rgba(255,255,255,0.78) 55%, rgba(200,160,255,0.9) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 30px rgba(0,0,0,0.45);
+          }
+
+          /* Bottom progress bar — 4 thicker segments, more presence */
+          .section2-mobile-progress {
+            position: absolute;
+            bottom: calc(5vh + env(safe-area-inset-bottom, 0px));
+            left: 28px;
+            right: 28px;
+            display: flex;
+            gap: 8px;
+            z-index: 4;
+            pointer-events: none;
+          }
+          .section2-mobile-progress-seg {
+            flex: 1;
+            height: 2.5px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 100px;
+            overflow: hidden;
+          }
+          .section2-mobile-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffebab 0%, #fff5cc 100%);
+            box-shadow: 0 0 10px rgba(255,235,171,0.55);
+            border-radius: 100px;
+            transition: width 0.15s linear;
+          }
+
+          /* CTA — climax button at the final story */
+          .section2-mobile-cta {
+            position: absolute;
+            bottom: 9vh;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            z-index: 3;
+            opacity: 0;
+            pointer-events: none;
+          }
+          .section2-mobile-cta > * {
+            pointer-events: auto;
+            transform: scale(0.72);
+          }
+        }
+
+        @media (max-width: 480px) {
+          .section2-mobile-pin { padding: 7vh 18px 4vh; }
+          .section2-mobile-card { height: 50vh; border-radius: 18px; }
+          .section2-mobile-text {
+            font-size: clamp(1.25rem, 5.4vw, 1.75rem);
+            line-height: 1.28;
+          }
+          .section2-mobile-chapter { font-size: 9px; padding: 6px 13px; letter-spacing: 0.36em; }
+          .section2-mobile-progress { bottom: calc(4vh + env(safe-area-inset-bottom, 0px)); left: 22px; right: 22px; }
+          .section2-mobile-cta { bottom: 8vh; }
+          .section2-mobile-cta > * { transform: scale(0.66); }
         }
 
         @media (max-width: 768px) {
           .hero-heading { font-size: clamp(4rem, 20vw, 8rem) !important; }
+          .hero-glass-card { padding: 20px !important; max-width: 100% !important; }
+          .hero-glass-card-wrap { bottom: 12% !important; }
+          .hero-glass-title { font-size: 24px !important; }
+          .hero-glass-body { font-size: 12px !important; }
+          .hero-glass-eyebrow { font-size: 10px !important; }
         }
       `}</style>
     </div>

@@ -26,10 +26,30 @@ function broadcastViewers() {
   io.of("/live").emit("viewers:count", { count, ts: Date.now() });
 }
 
+// Mirror the HTTP CORS rule: in dev, also accept localhost / 127.0.0.1 /
+// private-LAN origins so phones on the same wifi can connect.
+const isAllowedSocketOrigin = (origin: string | undefined): boolean => {
+  if (!origin) return true;
+  if (origin === "null" || origin.startsWith("file://")) return true;
+  if (env.ALLOWED_ORIGINS.includes(origin)) return true;
+  if (env.NODE_ENV === "production") return false;
+  try {
+    const u = new URL(origin);
+    if (u.hostname === "localhost" || u.hostname === "127.0.0.1") return true;
+    if (/^10\./.test(u.hostname)) return true;
+    if (/^192\.168\./.test(u.hostname)) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(u.hostname)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+};
+
 export function initSocket(httpServer: HttpServer) {
   io = new SocketServer(httpServer, {
     cors: {
-      origin: env.ALLOWED_ORIGINS,
+      origin: (origin, cb) =>
+        isAllowedSocketOrigin(origin) ? cb(null, true) : cb(new Error("Forbidden origin")),
       credentials: true,
     },
   });
@@ -38,7 +58,7 @@ export function initSocket(httpServer: HttpServer) {
 
   trackNs.use((socket, next) => {
     const origin = socket.handshake.headers.origin;
-    if (origin && !env.ALLOWED_ORIGINS.includes(origin)) {
+    if (!isAllowedSocketOrigin(origin)) {
       return next(new Error("Forbidden origin"));
     }
     next();

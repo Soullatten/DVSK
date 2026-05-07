@@ -480,7 +480,7 @@ export default function About() {
   // RENDER MEGA COMPONENT
   // ---------------------------------------------------------
   return (
-    <div ref={containerRef} style={{ backgroundColor: "#040404", color: "#ffffff", minHeight: "100vh", fontFamily: "'Jost', sans-serif", overflow: "hidden", position: "relative" }}>
+    <div ref={containerRef} className="dvsk-page-about" style={{ backgroundColor: "#040404", color: "#ffffff", minHeight: "100vh", fontFamily: "'Jost', sans-serif", overflow: "hidden", position: "relative" }}>
       
       {/* GLOBAL BACKGROUND NOISE (Always active, GPU accelerated static) */}
       <div style={{ position: "fixed", inset: 0, opacity: 0.03, pointerEvents: "none", zIndex: 9998, background: "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')" }} />
@@ -757,6 +757,26 @@ export default function About() {
         </div>
       </section>
 
+      {/* Mobile-only About page tweaks. Desktop stays exactly as-is. */}
+      <style>{`
+        @media (max-width: 768px) {
+          .dvsk-page-about section { padding-left: 5vw !important; padding-right: 5vw !important; }
+          .dvsk-page-about h1 { font-size: clamp(2.4rem, 12vw, 5rem) !important; line-height: 1.05 !important; }
+          .dvsk-page-about h2 { font-size: clamp(1.8rem, 8vw, 3rem) !important; }
+          .dvsk-page-about h3 { font-size: clamp(1.3rem, 5.5vw, 2rem) !important; }
+          .dvsk-page-about p { font-size: 13px !important; line-height: 1.6 !important; }
+          .dvsk-page-about .reveal-img-block {
+            max-width: 100% !important;
+            min-width: 0 !important;
+            aspect-ratio: 4/5 !important;
+            max-height: 60vh !important;
+          }
+          .dvsk-page-about .timeline-bg-text { font-size: 50vw !important; }
+        }
+        @media (max-width: 480px) {
+          .dvsk-page-about section { padding-left: 18px !important; padding-right: 18px !important; }
+        }
+      `}</style>
     </div>
   );
 }

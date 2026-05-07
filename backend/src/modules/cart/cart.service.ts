@@ -15,7 +15,22 @@ export async function getCart(userId: string) {
       items: {
         include: {
           product: {
-            select: { id: true, name: true, slug: true, basePrice: true, salePrice: true, isActive: true },
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              basePrice: true,
+              salePrice: true,
+              isActive: true,
+              // Pull the first product image so the cart sidebar + checkout
+              // page can show real thumbnails instead of falling back to a
+              // generic placeholder.
+              images: {
+                select: { url: true, position: true },
+                orderBy: { position: "asc" },
+                take: 1,
+              },
+            },
           },
           variant: {
             select: { id: true, size: true, color: true, colorHex: true, stock: true, priceOverride: true, sku: true },

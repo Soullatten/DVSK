@@ -398,6 +398,9 @@ export default function Womenswear() {
              margin-bottom: 0 !important;
           }
         }
+        @media (max-width: 640px) {
+          .filter-sidebar > div > div { min-width: 100% !important; flex: none !important; }
+        }
       `}</style>
     </div>
   );

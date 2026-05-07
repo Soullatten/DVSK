@@ -395,6 +395,18 @@ model PurchaseOrder {
   lng         Float?
   notes       String?
 
+  // ── Shipment details (set by admin from PurchaseOrders page) ──
+  // carrier        — courier name (FedEx, DHL, BlueDart, Delhivery, …)
+  // trackingNumber — courier-issued tracking ID
+  // dispatchedAt   — when supplier handed the freight to the carrier
+  // weight         — package weight in kg (free-form for unit flexibility)
+  // shipmentNotes  — admin-only notes about the shipment itself
+  carrier        String?
+  trackingNumber String?
+  dispatchedAt   DateTime?
+  weight         String?
+  shipmentNotes  String?
+
   lineItems   PurchaseOrderItem[]
 
   createdAt   DateTime  @default(now())
@@ -554,4 +566,90 @@ model Company {
 enum CompanyCategory {
   SUPPLIER
   SPONSOR
+}
+
+// ============ EMAIL LOG ============
+// One row per outgoing email send (manual or automatic).
+// Lets the admin see history, debug failures, and re-send.
+
+model EmailLog {
+  id            String          @id @default(cuid())
+  // Which template was used (matches template file name without .html)
+  templateKey   String
+  // Resolved subject line at the time of send
+  subject       String
+  // The actual destination address (after EMAIL_TEST_MODE redirect, if any)
+  toEmail       String
+  // The original intended recipient (the customer's email — kept even if
+  // test-mode redirected the send to the admin's inbox)
+  intendedEmail String?
+  // Optional links to the order / customer for filtering in the UI
+  orderId       String?
+  userId        String?
+
+  status        EmailLogStatus  @default(PENDING)
+  // Brevo / SMTP message-id once the send succeeds, for tracing
+  messageId     String?
+  // Error message if status = FAILED
+  errorMessage  String?
+  // Was this run in mock mode (no real SMTP creds set)?
+  wasMocked     Boolean         @default(false)
+  // Was the recipient redirected by EMAIL_TEST_MODE?
+  wasTestRedirect Boolean       @default(false)
+
+  // Snapshot of the template variables used — useful for re-sends + debugging
+  variables     Json?
+
+  // Who triggered the send (admin user id, "system" for auto-triggers, or "navya")
+  triggeredBy   String?
+
+  createdAt     DateTime        @default(now())
+  sentAt        DateTime?
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([templateKey])
+}
+
+enum EmailLogStatus {
+  PENDING
+  SENT
+  FAILED
+  MOCKED
+}
+
+// ============ NEWSLETTER SUBSCRIBERS ============
+// Captures email signups from the storefront footer + checkout box. Each
+// row represents one email address. Soft-deletion via `unsubscribedAt`
+// so we have an audit trail and can re-subscribe cleanly.
+
+model Subscriber {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  // Where the user signed up — "footer", "checkout", "drop-page", etc.
+  // Used by the admin Subscribers list to show acquisition channel.
+  source          String    @default("footer")
+  // Optional link to a registered User (set if they were logged in
+  // when they subscribed, otherwise null for anonymous email captures).
+  userId          String?
+  // ISO country code or city the subscribe came from (for analytics).
+  country         String?
+  // True once the user confirms via verification email — for now we
+  // auto-confirm since DOI flows are out of scope.
+  confirmed       Boolean   @default(true)
+  // Soft-delete flag. Set when user unsubscribes (via unsubscribe link
+  // in any campaign email). Keep the row so we don't re-add them by
+  // accident.
+  unsubscribedAt  DateTime?
+  // Tags for segmentation (free-form, comma-separated). Future use.
+  tags            String?
+
+  subscribedAt    DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([email])
+  @@index([source])
+  @@index([unsubscribedAt])
 }
