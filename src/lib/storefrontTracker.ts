@@ -4,7 +4,7 @@ import { io, type Socket } from "socket.io-client";
 
 const SOCKET_URL =
   (import.meta as any).env?.VITE_API_URL?.replace(/\/api\/?$/, "") ||
-  "http://localhost:5000";
+  "https://dvsk-backend.onrender.com";
 
 export function useStorefrontTracker() {
   const location = useLocation();

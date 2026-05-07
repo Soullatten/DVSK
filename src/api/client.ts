@@ -1,13 +1,13 @@
 import axios from 'axios';
 import { auth } from '../firebase';
 
-// In dev, points at the local Express backend on port 5000.
-// In production (Vercel), set VITE_API_URL to your live backend URL —
-// e.g. "https://dvsk-backend.onrender.com/api". Vite bakes this into the
-// bundle at build time, so changing it requires a redeploy.
+// In dev, set VITE_API_URL=http://localhost:5000/api in .env to hit your
+// local backend. In production (Vercel), Vercel env var is set to the
+// Render URL. The fallback below targets Render too — so even if the env
+// var is missing the live site still talks to the live backend.
 export const API_BASE_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ||
-  'http://localhost:5000/api';
+  'https://dvsk-backend.onrender.com/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
