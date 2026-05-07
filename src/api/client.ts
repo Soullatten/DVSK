@@ -1,8 +1,13 @@
 import axios from 'axios';
 import { auth } from '../firebase';
 
-// Ensure this matches the port your backend is actually running on (5000)
-export const API_BASE_URL = 'http://localhost:5000/api';
+// In dev, points at the local Express backend on port 5000.
+// In production (Vercel), set VITE_API_URL to your live backend URL —
+// e.g. "https://dvsk-backend.onrender.com/api". Vite bakes this into the
+// bundle at build time, so changing it requires a redeploy.
+export const API_BASE_URL =
+  (import.meta.env.VITE_API_URL as string | undefined) ||
+  'http://localhost:5000/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

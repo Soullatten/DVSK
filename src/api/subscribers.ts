@@ -1,7 +1,6 @@
 // Public newsletter-subscribe API. No auth — anyone with an email can
 // subscribe from any signup form on the storefront.
-
-const API_BASE_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from "./client";
 
 export interface SubscribeResult {
   id: string;
