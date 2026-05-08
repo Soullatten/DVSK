@@ -55,11 +55,11 @@ function LoginForm({ onRegister, onPhoneClick }: { onRegister: () => void, onPho
 
   return (
     <div className="w-full max-w-sm mx-auto flex flex-col items-stretch">
-      <div className="mb-6 text-center">
-        <h1 className="text-3xl md:text-4xl font-semibold text-white leading-tight tracking-tight" style={{ fontFamily: 'DM Sans' }}>
+      <div className="mb-5 text-center">
+        <h1 className="text-2xl md:text-4xl font-semibold text-white leading-tight tracking-tight" style={{ fontFamily: 'DM Sans' }}>
           Welcome Back
         </h1>
-        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ fontFamily: 'DM Sans' }}>
+        <p className="text-white/40 text-xs md:text-sm mt-1 tracking-wide" style={{ fontFamily: 'DM Sans' }}>
           Please log in to continue.
         </p>
       </div>
@@ -186,11 +186,11 @@ function PhoneForm({ onBack }: { onBack: () => void }) {
     <div className="w-full max-w-sm mx-auto flex flex-col items-stretch">
       <div id="recaptcha-container" />
 
-      <div className="mb-6 text-center">
-        <h1 className="text-3xl md:text-4xl font-semibold text-white leading-tight tracking-tight" style={{ fontFamily: 'DM Sans' }}>
+      <div className="mb-5 text-center">
+        <h1 className="text-2xl md:text-4xl font-semibold text-white leading-tight tracking-tight" style={{ fontFamily: 'DM Sans' }}>
           Phone Login
         </h1>
-        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ fontFamily: 'DM Sans' }}>
+        <p className="text-white/40 text-xs md:text-sm mt-1 tracking-wide" style={{ fontFamily: 'DM Sans' }}>
           We'll send you a one-time code.
         </p>
       </div>
@@ -274,11 +274,11 @@ function RegisterForm({ onLogin }: { onLogin: () => void }) {
 
   return (
     <div className="w-full max-w-sm mx-auto flex flex-col items-stretch">
-      <div className="mb-6 text-center">
-        <h1 className="text-3xl md:text-4xl font-semibold text-white leading-tight tracking-tight" style={{ fontFamily: 'DM Sans' }}>
+      <div className="mb-5 text-center">
+        <h1 className="text-2xl md:text-4xl font-semibold text-white leading-tight tracking-tight" style={{ fontFamily: 'DM Sans' }}>
           Create Account
         </h1>
-        <p className="text-white/40 text-sm mt-1 tracking-wide" style={{ fontFamily: 'DM Sans' }}>
+        <p className="text-white/40 text-xs md:text-sm mt-1 tracking-wide" style={{ fontFamily: 'DM Sans' }}>
           Join us — it only takes a minute.
         </p>
       </div>
@@ -354,17 +354,20 @@ export default function App() {
   const [view, setView] = useState<'login' | 'register' | 'phone'>('login')
 
   return (
-    // Use min-h-screen + w-full + overflow-x-hidden so mobile lets you
-    // scroll naturally without horizontal bleed from the rotated logo.
+    // Mobile: single-column compact layout, fits ~iPhone SE without scrolling.
+    // Desktop: split panel with PixelBlast on left, form on right.
     <div className="flex flex-col md:flex-row min-h-screen w-full overflow-x-hidden bg-black relative">
-      <PixelDragon />
+      {/* PixelDragon hidden on mobile — it's a heavy 3D component that
+          eats half the screen and confuses the focus. Desktop only. */}
+      <div className="hidden md:block">
+        <PixelDragon />
+      </div>
 
-      {/* Mobile-only ambient PixelBlast — full-bleed background, dimmed
-          so it doesn't fight the form for attention. Hidden on md+ where
-          the side-panel version takes over. */}
+      {/* Mobile-only background: subtle PixelBlast pinned behind everything.
+          Lower opacity so it never competes with the form. */}
       <div className="absolute inset-0 md:hidden pointer-events-none">
-        <PixelBlast variant="circle" pixelSize={4} color="#77148a" patternScale={2} patternDensity={1} pixelSizeJitter={0} enableRipples rippleSpeed={0.4} rippleThickness={0.12} rippleIntensityScale={1.5} liquid={false} liquidStrength={0.12} liquidRadius={1.2} liquidWobbleSpeed={5} speed={0.5} edgeFade={0.25} />
-        <div className="absolute inset-0 bg-black/50" />
+        <PixelBlast variant="circle" pixelSize={3} color="#5b1370" patternScale={2} patternDensity={0.8} pixelSizeJitter={0} enableRipples rippleSpeed={0.3} rippleThickness={0.1} rippleIntensityScale={1.2} liquid={false} liquidStrength={0.1} liquidRadius={1.2} liquidWobbleSpeed={4} speed={0.4} edgeFade={0.3} />
+        <div className="absolute inset-0 bg-black/65" />
       </div>
 
       {/* Desktop-only left panel with bigger PixelBlast effect */}
@@ -374,18 +377,29 @@ export default function App() {
         </div>
       </div>
 
-      {/* Form column. Mobile = full-width centered with auto-flow padding;
-          desktop = right half with more breathing room. */}
-      <div className="relative z-10 flex flex-col w-full md:w-1/2 min-h-screen md:h-screen items-center justify-start md:justify-center px-5 sm:px-10 md:px-16 pt-10 pb-12 md:py-0 md:overflow-y-auto">
-        {/* Logo — small + un-rotated on mobile so it doesn't overflow the
-            viewport horizontally. Tilted version on tablet/desktop only. */}
+      {/* Form column. Mobile = compact full-screen flex with the form vertically
+          centered; desktop = right half with the rotated metallic logo. */}
+      <div className="relative z-10 flex flex-col w-full md:w-1/2 min-h-screen md:h-screen items-center justify-center px-5 sm:px-10 md:px-16 py-6 md:py-0 md:overflow-y-auto">
+
+        {/* MOBILE-ONLY tiny brand mark — replaces the heavy MetallicPaint
+            so the form fits a phone viewport without scrolling. */}
+        <div className="md:hidden mb-6 text-center select-none">
+          <div className="text-[34px] font-bold text-white tracking-[0.32em]" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontWeight: 300, letterSpacing: '0.16em' }}>
+            DVSK
+          </div>
+          <div className="text-[9px] text-[#ffebab]/60 tracking-[0.5em] uppercase mt-1 font-bold">
+            Syndicate
+          </div>
+        </div>
+
+        {/* DESKTOP-ONLY rotated metallic logo. Hidden on mobile entirely. */}
         <div
           className="
-            w-full max-w-[280px] sm:max-w-[420px] md:max-w-[700px]
+            hidden md:block
+            w-full max-w-[700px]
             aspect-[2/1]
-            mb-2 sm:mb-0
-            sm:-mt-6 md:-mt-20 lg:-mt-24
-            md:rotate-[8deg]
+            -mt-20 lg:-mt-24
+            rotate-[8deg]
             pointer-events-none
             shrink-0
           "
@@ -394,9 +408,9 @@ export default function App() {
           <MetallicPaint imageSrc={logo} seed={42} scale={2} patternSharpness={0.2} noiseScale={2.5} speed={0.45} liquid={0.25} mouseAnimation={false} brightness={2.45} contrast={0.52} refraction={0.02} blur={0.05} chromaticSpread={1} fresnel={1} angle={1} waveAmplitude={1} distortion={1} contour={0.2} lightColor="#3D0080" darkColor="#000000" tintColor="#8B2BE2" />
         </div>
 
-        {/* Form — natural flow on mobile (no negative margin pull), small
-            negative pull on desktop where the rotated logo creates space. */}
-        <div className="flex flex-col w-full max-w-sm mt-0 sm:mt-[-40px] md:mt-[-60px] relative z-20">
+        {/* Form — natural flow on mobile, pulled up on desktop where the
+            rotated logo creates dead space above. */}
+        <div className="flex flex-col w-full max-w-sm md:mt-[-60px] relative z-20">
           {view === 'login' && <LoginForm onRegister={() => setView('register')} onPhoneClick={() => setView('phone')} />}
           {view === 'register' && <RegisterForm onLogin={() => setView('login')} />}
           {view === 'phone' && <PhoneForm onBack={() => setView('login')} />}
