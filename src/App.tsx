@@ -354,25 +354,49 @@ export default function App() {
   const [view, setView] = useState<'login' | 'register' | 'phone'>('login')
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-black relative">
+    // Use min-h-screen + w-full + overflow-x-hidden so mobile lets you
+    // scroll naturally without horizontal bleed from the rotated logo.
+    <div className="flex flex-col md:flex-row min-h-screen w-full overflow-x-hidden bg-black relative">
       <PixelDragon />
-      <div className="absolute inset-0 md:hidden">
+
+      {/* Mobile-only ambient PixelBlast — full-bleed background, dimmed
+          so it doesn't fight the form for attention. Hidden on md+ where
+          the side-panel version takes over. */}
+      <div className="absolute inset-0 md:hidden pointer-events-none">
         <PixelBlast variant="circle" pixelSize={4} color="#77148a" patternScale={2} patternDensity={1} pixelSizeJitter={0} enableRipples rippleSpeed={0.4} rippleThickness={0.12} rippleIntensityScale={1.5} liquid={false} liquidStrength={0.12} liquidRadius={1.2} liquidWobbleSpeed={5} speed={0.5} edgeFade={0.25} />
-        <div className="absolute inset-0 bg-black/30" />
+        <div className="absolute inset-0 bg-black/50" />
       </div>
 
-      <div className="hidden md:flex items-center justify-center w-1/2 h-full p-6">
+      {/* Desktop-only left panel with bigger PixelBlast effect */}
+      <div className="hidden md:flex items-center justify-center w-1/2 h-screen p-6">
         <div className="w-full h-full rounded-2xl overflow-hidden">
           <PixelBlast variant="circle" pixelSize={4} color="#9333ea" patternScale={2} patternDensity={1} pixelSizeJitter={0} enableRipples rippleSpeed={0.4} rippleThickness={0.12} rippleIntensityScale={1.5} liquid={false} liquidStrength={1.12} liquidRadius={100.2} liquidWobbleSpeed={5} speed={0.5} edgeFade={0.25} />
         </div>
       </div>
 
-      <div className="relative z-10 flex flex-col w-full md:w-1/2 h-full items-center justify-center px-4 sm:px-10 md:px-16 overflow-y-auto pb-10">
-        <div className="w-full max-w-[700px] aspect-[2/1] -mt-10 sm:-mt-20 md:-mt-20 lg:-mt-24 pointer-events-none" style={{ transform: 'rotate(8deg)', transformOrigin: 'center center', flexShrink: 0 }}>
+      {/* Form column. Mobile = full-width centered with auto-flow padding;
+          desktop = right half with more breathing room. */}
+      <div className="relative z-10 flex flex-col w-full md:w-1/2 min-h-screen md:h-screen items-center justify-start md:justify-center px-5 sm:px-10 md:px-16 pt-10 pb-12 md:py-0 md:overflow-y-auto">
+        {/* Logo — small + un-rotated on mobile so it doesn't overflow the
+            viewport horizontally. Tilted version on tablet/desktop only. */}
+        <div
+          className="
+            w-full max-w-[280px] sm:max-w-[420px] md:max-w-[700px]
+            aspect-[2/1]
+            mb-2 sm:mb-0
+            sm:-mt-6 md:-mt-20 lg:-mt-24
+            md:rotate-[8deg]
+            pointer-events-none
+            shrink-0
+          "
+          style={{ transformOrigin: 'center center' }}
+        >
           <MetallicPaint imageSrc={logo} seed={42} scale={2} patternSharpness={0.2} noiseScale={2.5} speed={0.45} liquid={0.25} mouseAnimation={false} brightness={2.45} contrast={0.52} refraction={0.02} blur={0.05} chromaticSpread={1} fresnel={1} angle={1} waveAmplitude={1} distortion={1} contour={0.2} lightColor="#3D0080" darkColor="#000000" tintColor="#8B2BE2" />
         </div>
 
-        <div className="flex flex-col w-full max-w-sm mt-[-40px] sm:mt-[-80px] relative z-20">
+        {/* Form — natural flow on mobile (no negative margin pull), small
+            negative pull on desktop where the rotated logo creates space. */}
+        <div className="flex flex-col w-full max-w-sm mt-0 sm:mt-[-40px] md:mt-[-60px] relative z-20">
           {view === 'login' && <LoginForm onRegister={() => setView('register')} onPhoneClick={() => setView('phone')} />}
           {view === 'register' && <RegisterForm onLogin={() => setView('login')} />}
           {view === 'phone' && <PhoneForm onBack={() => setView('login')} />}
