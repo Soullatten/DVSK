@@ -1,11 +1,8 @@
 import PixelBlast from "./components/PixelBlast"
-import MetallicPaint from "./components/MetallicPaint"
 import { useGoogleLogin } from "@react-oauth/google"
 import BorderGlow from "./components/BorderGlow"
 import { useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import logo from './assets/logo.svg'
-import PixelDragon from './components/PixelDragon'
 import { auth } from "./firebase"
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth"
 import type { ConfirmationResult } from "firebase/auth"
@@ -354,63 +351,45 @@ export default function App() {
   const [view, setView] = useState<'login' | 'register' | 'phone'>('login')
 
   return (
-    // Mobile: single-column compact layout, fits ~iPhone SE without scrolling.
-    // Desktop: split panel with PixelBlast on left, form on right.
-    <div className="flex flex-col md:flex-row min-h-screen w-full overflow-x-hidden bg-black relative">
-      {/* PixelDragon hidden on mobile — it's a heavy 3D component that
-          eats half the screen and confuses the focus. Desktop only. */}
-      <div className="hidden md:block">
-        <PixelDragon />
-      </div>
+    // Single-column centered layout for both mobile and desktop. The
+    // desktop side-panel split is gone — logo sits centered above the
+    // form, form is vertically centered within the viewport.
+    <div className="flex flex-col min-h-screen w-full overflow-x-hidden bg-black relative">
 
-      {/* Mobile-only background: subtle PixelBlast pinned behind everything.
-          Lower opacity so it never competes with the form. */}
-      <div className="absolute inset-0 md:hidden pointer-events-none">
+      {/* Ambient PixelBlast pinned behind everything (mobile + desktop).
+          Provides the subtle purple-purple shimmer without taking layout
+          space. Dimmed via a 60% black overlay so the form reads cleanly. */}
+      <div className="absolute inset-0 pointer-events-none">
         <PixelBlast variant="circle" pixelSize={3} color="#5b1370" patternScale={2} patternDensity={0.8} pixelSizeJitter={0} enableRipples rippleSpeed={0.3} rippleThickness={0.1} rippleIntensityScale={1.2} liquid={false} liquidStrength={0.1} liquidRadius={1.2} liquidWobbleSpeed={4} speed={0.4} edgeFade={0.3} />
-        <div className="absolute inset-0 bg-black/65" />
+        <div className="absolute inset-0 bg-black/60" />
       </div>
 
-      {/* Desktop-only left panel with bigger PixelBlast effect */}
-      <div className="hidden md:flex items-center justify-center w-1/2 h-screen p-6">
-        <div className="w-full h-full rounded-2xl overflow-hidden">
-          <PixelBlast variant="circle" pixelSize={4} color="#9333ea" patternScale={2} patternDensity={1} pixelSizeJitter={0} enableRipples rippleSpeed={0.4} rippleThickness={0.12} rippleIntensityScale={1.5} liquid={false} liquidStrength={1.12} liquidRadius={100.2} liquidWobbleSpeed={5} speed={0.5} edgeFade={0.25} />
-        </div>
-      </div>
+      {/* Centered single column: logo above, form below. Vertically
+          centered with min-h-screen + justify-center. */}
+      <div className="relative z-10 flex flex-col w-full min-h-screen items-center justify-center px-5 sm:px-10 py-10">
 
-      {/* Form column. Mobile = compact full-screen flex with the form vertically
-          centered; desktop = right half with the rotated metallic logo. */}
-      <div className="relative z-10 flex flex-col w-full md:w-1/2 min-h-screen md:h-screen items-center justify-center px-5 sm:px-10 md:px-16 py-6 md:py-0 md:overflow-y-auto">
-
-        {/* MOBILE-ONLY tiny brand mark — replaces the heavy MetallicPaint
-            so the form fits a phone viewport without scrolling. */}
-        <div className="md:hidden mb-6 text-center select-none">
-          <div className="text-[34px] font-bold text-white tracking-[0.32em]" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontWeight: 300, letterSpacing: '0.16em' }}>
+        {/* Centered DVSK wordmark — same on every breakpoint, just
+            scales up on bigger screens. No rotation, no MetallicPaint. */}
+        <div className="mb-8 sm:mb-10 text-center select-none">
+          <div
+            className="text-[44px] sm:text-[56px] md:text-[68px] text-white"
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontStyle: "italic",
+              fontWeight: 300,
+              letterSpacing: "0.18em",
+              lineHeight: 1,
+            }}
+          >
             DVSK
           </div>
-          <div className="text-[9px] text-[#ffebab]/60 tracking-[0.5em] uppercase mt-1 font-bold">
+          <div className="text-[10px] sm:text-[11px] text-[#ffebab]/70 tracking-[0.5em] uppercase mt-2 font-bold">
             Syndicate
           </div>
         </div>
 
-        {/* DESKTOP-ONLY rotated metallic logo. Hidden on mobile entirely. */}
-        <div
-          className="
-            hidden md:block
-            w-full max-w-[700px]
-            aspect-[2/1]
-            -mt-20 lg:-mt-24
-            rotate-[8deg]
-            pointer-events-none
-            shrink-0
-          "
-          style={{ transformOrigin: 'center center' }}
-        >
-          <MetallicPaint imageSrc={logo} seed={42} scale={2} patternSharpness={0.2} noiseScale={2.5} speed={0.45} liquid={0.25} mouseAnimation={false} brightness={2.45} contrast={0.52} refraction={0.02} blur={0.05} chromaticSpread={1} fresnel={1} angle={1} waveAmplitude={1} distortion={1} contour={0.2} lightColor="#3D0080" darkColor="#000000" tintColor="#8B2BE2" />
-        </div>
-
-        {/* Form — natural flow on mobile, pulled up on desktop where the
-            rotated logo creates dead space above. */}
-        <div className="flex flex-col w-full max-w-sm md:mt-[-60px] relative z-20">
+        {/* Form — natural-flow centered. */}
+        <div className="flex flex-col w-full max-w-sm relative z-20">
           {view === 'login' && <LoginForm onRegister={() => setView('register')} onPhoneClick={() => setView('phone')} />}
           {view === 'register' && <RegisterForm onLogin={() => setView('login')} />}
           {view === 'phone' && <PhoneForm onBack={() => setView('login')} />}
