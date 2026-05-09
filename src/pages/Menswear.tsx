@@ -7,7 +7,6 @@ import { SlidersHorizontal, Loader2 } from 'lucide-react';
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import TypeFilterBar, { matchesType, type TypeFilterEntry } from "../components/TypeFilterBar";
-import ProductCardCinematic from "../components/ProductCardCinematic";
 import { productsApi } from "../api/products";
 import type { Product } from "../api/types";
 
@@ -236,8 +235,52 @@ export default function Menswear() {
                 </div>
               ) : (
               <AnimatePresence mode="popLayout">
-                {filteredProducts.map((prod, i) => (
-                  <ProductCardCinematic key={prod.id} product={prod as any} index={i} />
+                {filteredProducts.map((prod) => (
+                  <motion.div
+                    layout
+                    key={prod.id}
+                    onClick={() => navigate(`/product/${prod.slug}`)}
+                    initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    style={{ cursor: "pointer", textAlign: "left" }}
+                    className="product-wrapper"
+                  >
+                    <div style={{ width: "100%", aspectRatio: "3/4", overflow: "hidden", position: "relative", marginBottom: "16px", background: "linear-gradient(135deg, #0a0a0a 0%, #161616 50%, #0a0a0a 100%)" }}>
+                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "8px" }}>
+                        <div style={{ fontSize: "10px", letterSpacing: "0.3em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase" }}>No Image</div>
+                        <div style={{ fontSize: "9px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.15)" }}>DVSK</div>
+                      </div>
+                      {prod.images?.[0]?.url && (
+                        <img
+                          src={prod.images[0].url}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", position: "relative", zIndex: 1, transition: "transform 1s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease" }}
+                          className="product-image"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      )}
+
+                      <div style={{ position: "absolute", inset: 0, background: "rgba(8,8,8,0.4)", opacity: 0, transition: "opacity 0.4s", display: "flex", alignItems: "center", justifyContent: "center" }} className="product-overlay">
+                        <span style={{ padding: "12px 28px", background: "rgba(139, 43, 226, 0.2)", border: "1px solid rgba(139, 43, 226, 0.5)", borderRadius: "100px", fontSize: "10px", letterSpacing: "0.25em", backdropFilter: "blur(8px)", color: "#fff", transition: "all 0.3s ease", boxShadow: "0 4px 20px rgba(139, 43, 226, 0.2)" }} className="view-btn">QUICK VIEW</span>
+                      </div>
+
+                      <div style={{ position: "absolute", top: "15px", left: "15px", background: "rgba(0,0,0,0.4)", border: "0.5px solid rgba(255,255,255,0.1)", backdropFilter: "blur(8px)", padding: "4px 8px", fontSize: "9px", letterSpacing: "0.15em", color: "rgba(255,255,255,0.9)" }}>
+                        {prod.tag.replace('_', ' ')}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                      <h3 style={{ fontSize: "13px", fontWeight: 400, letterSpacing: "0.1em", margin: 0, textTransform: "uppercase" }}>{prod.name}</h3>
+                      <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", fontWeight: 300, letterSpacing: "0.05em" }}>
+                        {prod.salePrice ? (
+                          <><span style={{ textDecoration: "line-through", color: "rgba(255,255,255,0.3)", marginRight: "8px" }}>₹{Number(prod.basePrice).toLocaleString()}</span>₹{Number(prod.salePrice).toLocaleString()}</>
+                        ) : (
+                          <>₹{Number(prod.basePrice).toLocaleString()}</>
+                        )}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", marginTop: "8px", letterSpacing: "0.15em", textTransform: "uppercase" }}>{prod.category.name}</div>
+                  </motion.div>
                 ))}
               </AnimatePresence>
               )}
